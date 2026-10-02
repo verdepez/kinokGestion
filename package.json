@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "node ./start-dev.mjs dev",
-    "build": "node ./start-dev.mjs build"
+    "build": "node ./start-dev.mjs build",
+    "start": "node ./server.js"
   },
   "dependencies": {
+    "express": "^5.2.1",
     "lucide-react": "^0.468.0",
+    "pg": "^8.23.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

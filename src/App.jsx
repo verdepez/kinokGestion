@@ -57,6 +57,48 @@ export default function App() {
   // Registro de auditoría RBAC en vivo
   const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
 
+  // Indicador de conexión a PostgreSQL
+  const [dbConnected, setDbConnected] = useState(false);
+
+  // Cargar datos desde PostgreSQL al iniciar
+  useEffect(() => {
+    fetch('/api/state')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setDbConnected(Boolean(data.dbConnected));
+          if (Array.isArray(data.projects) && data.projects.length > 0) {
+            setProjects(data.projects);
+          }
+          if (Array.isArray(data.auditLogs) && data.auditLogs.length > 0) {
+            setAuditLogs(data.auditLogs);
+          }
+        }
+      })
+      .catch(() => {
+        setDbConnected(false);
+      });
+  }, []);
+
+  const updateProjectsAndSync = (updater) => {
+    setProjects((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      fetch('/api/projects', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projects: next }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && typeof data.dbConnected === 'boolean') {
+            setDbConnected(data.dbConnected);
+          }
+        })
+        .catch(() => {});
+      return next;
+    });
+  };
+
   // Modal y Toast de error HTTP 403 Forbidden (RBAC)
   const [forbiddenErrorModalOpen, setForbiddenErrorModalOpen] = useState(false);
   const [forbiddenToast, setForbiddenToast] = useState(null);
@@ -69,17 +111,20 @@ export default function App() {
     const timeStr = `2026-09-30 ${String(now.getHours()).padStart(2, '0')}:${String(
       now.getMinutes()
     ).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-    setAuditLogs((prev) => [
-      {
-        id: `AUD-${Date.now()}`,
-        timestamp: timeStr,
-        actor,
-        action,
-        status,
-        severity,
-      },
-      ...prev,
-    ]);
+    const newLog = {
+      id: `AUD-${Date.now()}`,
+      timestamp: timeStr,
+      actor,
+      action,
+      status,
+      severity,
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+    fetch('/api/audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ log: newLog }),
+    }).catch(() => {});
   };
 
   // Cambio instantáneo de Rol
@@ -129,7 +174,7 @@ export default function App() {
 
   // Mover proyecto de fase
   const handleMoveProjectPhase = (projectId, newPhase) => {
-    setProjects((prev) =>
+    updateProjectsAndSync((prev) =>
       prev.map((p) =>
         p.id === projectId
           ? {
@@ -186,7 +231,7 @@ export default function App() {
       ],
     };
 
-    setProjects((prev) => [newProject, ...prev]);
+    updateProjectsAndSync((prev) => [newProject, ...prev]);
     setSelectedProjectId(newId);
     appendAuditLog(
       'Nicolás Iriarte',
@@ -198,7 +243,7 @@ export default function App() {
 
   // Actualizar monto presupuestado de una partida
   const handleUpdateBudgetCategory = (projectId, categoryId, newAmount) => {
-    setProjects((prev) =>
+    updateProjectsAndSync((prev) =>
       prev.map((p) =>
         p.id === projectId
           ? {
@@ -215,7 +260,7 @@ export default function App() {
 
   // Actualizar Margen Deseado (%)
   const handleUpdateMargin = (projectId, newMarginPct) => {
-    setProjects((prev) =>
+    updateProjectsAndSync((prev) =>
       prev.map((p) =>
         p.id === projectId
           ? {
@@ -234,7 +279,7 @@ export default function App() {
       ...expenseData,
     };
 
-    setProjects((prev) =>
+    updateProjectsAndSync((prev) =>
       prev.map((p) =>
         p.id === projectId
           ? {
@@ -257,7 +302,7 @@ export default function App() {
 
   // Eliminar Gasto Real
   const handleDeleteExpense = (projectId, expenseId) => {
-    setProjects((prev) =>
+    updateProjectsAndSync((prev) =>
       prev.map((p) =>
         p.id === projectId
           ? {
@@ -271,7 +316,7 @@ export default function App() {
 
   // Alternar Switch "¿Fuera de Alcance?"
   const handleToggleRevisionScope = (projectId, revisionId) => {
-    setProjects((prev) =>
+    updateProjectsAndSync((prev) =>
       prev.map((p) => {
         if (p.id !== projectId) return p;
         return {
@@ -286,7 +331,7 @@ export default function App() {
 
   // Agregar nueva ronda de revisión
   const handleAddRevision = (projectId, revData) => {
-    setProjects((prev) =>
+    updateProjectsAndSync((prev) =>
       prev.map((p) => {
         if (p.id !== projectId) return p;
         const nextRound = (p.revisions?.length || 0) + 1;
@@ -307,7 +352,7 @@ export default function App() {
 
   // Actualizar estado de tarea desde Portal Freelance
   const handleUpdateTaskStatus = (projectId, taskId, newStatus) => {
-    setProjects((prev) =>
+    updateProjectsAndSync((prev) =>
       prev.map((p) => {
         if (p.id !== projectId) return p;
         return {
@@ -331,6 +376,14 @@ export default function App() {
     setProjects(INITIAL_PROJECTS);
     setAuditLogs(INITIAL_AUDIT_LOGS);
     setForbiddenToast(null);
+    fetch('/api/reset', { method: 'POST' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.dbConnected === 'boolean') {
+          setDbConnected(data.dbConnected);
+        }
+      })
+      .catch(() => {});
   };
 
   const selectedProject =
@@ -416,14 +469,36 @@ export default function App() {
             </nav>
           )}
 
-          <button
-            type="button"
-            onClick={handleResetDemoData}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-200"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>Restaurar demo</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[11px] font-medium ${
+                dbConnected
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
+                  : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400'
+              }`}
+              title={
+                dbConnected
+                  ? 'Conectado a PostgreSQL en Railway'
+                  : 'Ejecutando en memoria local (sin DATABASE_URL)'
+              }
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  dbConnected ? 'bg-emerald-500' : 'bg-slate-400'
+                }`}
+              />
+              {dbConnected ? 'PostgreSQL Activo' : 'Memoria Local'}
+            </span>
+
+            <button
+              type="button"
+              onClick={handleResetDemoData}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-200"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Restaurar demo</span>
+            </button>
+          </div>
         </div>
       </div>
 
