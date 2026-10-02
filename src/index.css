@@ -9,7 +9,8 @@
     --scrollbar-thumb: #cbd5e1;
   }
 
-  :root.dark {
+  :root.dark,
+  .dark {
     color-scheme: dark;
     --scrollbar-track: #09090b;
     --scrollbar-thumb: #27272a;
