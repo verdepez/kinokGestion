@@ -20,22 +20,32 @@ export default function App() {
   // Tema visual: 'light' por defecto con opción de 'dark'
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('kinok-theme') || 'light';
+      const saved = localStorage.getItem('kinok-theme-mode');
+      return saved === 'dark' ? 'dark' : 'light';
     }
     return 'light';
   });
 
   useEffect(() => {
     const root = document.documentElement;
+    const body = document.body;
     const metaScheme = document.querySelector('meta[name="color-scheme"]');
     if (theme === 'dark') {
       root.classList.add('dark');
+      root.classList.remove('light');
+      body.classList.add('dark');
+      body.classList.remove('light');
+      root.style.colorScheme = 'dark';
       if (metaScheme) metaScheme.content = 'dark';
     } else {
       root.classList.remove('dark');
+      root.classList.add('light');
+      body.classList.remove('dark');
+      body.classList.add('light');
+      root.style.colorScheme = 'light';
       if (metaScheme) metaScheme.content = 'light';
     }
-    localStorage.setItem('kinok-theme', theme);
+    localStorage.setItem('kinok-theme-mode', theme);
   }, [theme]);
 
   const handleToggleTheme = () => {
@@ -392,7 +402,11 @@ export default function App() {
   const isDirector = currentRole === 'director';
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100 flex flex-col">
+    <div
+      className={`${
+        theme === 'dark' ? 'dark bg-zinc-950 text-zinc-100' : 'light bg-slate-50 text-slate-900'
+      } min-h-screen transition-colors flex flex-col`}
+    >
       {/* Barra Superior con Selector de Rol y Tema Claro/Oscuro */}
       <TopBarRoleSelector
         currentRole={currentRole}
