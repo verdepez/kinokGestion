@@ -22,6 +22,20 @@ import ProjectDetailView from './components/ProjectDetailView';
 import FreelancePortalView from './components/FreelancePortalView';
 import NativeModal from './components/NativeModal';
 import ScheduleEstimatorModal from './components/ScheduleEstimatorModal';
+import KinokLandingPage from './components/KinokLandingPage';
+
+function detectInitialPwaMode() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  const isStandaloneDisplay =
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    window.navigator.standalone === true;
+  const hasPwaParam =
+    params.get('app') === 'pwa' ||
+    params.get('pwa') === '1' ||
+    window.location.hash === '#pwa';
+  return Boolean(isStandaloneDisplay || hasPwaParam);
+}
 
 export default function App() {
   // Tema visual: 'light' por defecto con opción de 'dark'
@@ -511,6 +525,80 @@ export default function App() {
   const isDirector = currentRole === 'director';
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
 
+  // Estado Puerta de Entrada: Landing pública por defecto en '/', o Sistema Interno si se abre como PWA (?app=pwa / standalone)
+  const [isSystemOpen, setIsSystemOpen] = useState(detectInitialPwaMode);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isPwaInstalled, setIsPwaInstalled] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        window.navigator.standalone === true
+    );
+  });
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    const handleAppInstalled = () => {
+      setIsPwaInstalled(true);
+      setDeferredPrompt(null);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try {
+      await deferredPrompt.userChoice;
+    } catch {
+      // Ignorar cancelación de instalación
+    }
+    setDeferredPrompt(null);
+  };
+
+  const handleEnterSystem = (role = 'director') => {
+    handleRoleChange(role);
+    setIsSystemOpen(true);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('app', 'pwa');
+      window.history.replaceState({}, '', url.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleBackToLanding = () => {
+    setIsSystemOpen(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('app');
+      url.searchParams.delete('pwa');
+      url.hash = '';
+      window.history.replaceState({}, '', url.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Si está en el Home público (/), mostrar la Landing Page constructivista de Kinok como puerta de entrada
+  if (!isSystemOpen) {
+    return (
+      <KinokLandingPage
+        onEnterSystem={handleEnterSystem}
+        deferredPrompt={deferredPrompt}
+        onInstallPwa={handleInstallPwa}
+        isPwaInstalled={isPwaInstalled}
+      />
+    );
+  }
+
   return (
     <div
       className={`${
@@ -526,6 +614,9 @@ export default function App() {
         auditCount={auditLogs.length}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        onBackToLanding={handleBackToLanding}
+        deferredPrompt={deferredPrompt}
+        onInstallPwa={handleInstallPwa}
       />
 
       {/* Sub-navegación superior (Solo Desktop md+) con botón + Cotizar Proyecto integrado */}

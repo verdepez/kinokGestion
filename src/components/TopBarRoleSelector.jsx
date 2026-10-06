@@ -7,6 +7,8 @@ import {
   History,
   Sun,
   Moon,
+  Globe,
+  Download,
 } from 'lucide-react';
 import { USERS } from '../data/mockData';
 
@@ -18,6 +20,9 @@ export default function TopBarRoleSelector({
   auditCount,
   theme,
   onToggleTheme,
+  onBackToLanding,
+  deferredPrompt,
+  onInstallPwa,
 }) {
   const activeUser = USERS[currentRole];
   const isDirector = currentRole === 'director';
@@ -26,23 +31,52 @@ export default function TopBarRoleSelector({
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md transition-colors dark:border-zinc-800 dark:bg-zinc-900/95">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        {/* Marca Kinok simplificada */}
+        {/* Marca Kinok OS (PWA) */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm dark:bg-emerald-500 dark:text-zinc-950">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E73913] text-white shadow-sm">
             <Film className="h-4 w-4" />
           </div>
           <div>
-            <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-              Kinok <span className="font-medium text-emerald-600 dark:text-emerald-400">Gestión</span>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
+                Kinok <span className="font-medium text-emerald-600 dark:text-emerald-400">Gestión</span>
+              </span>
+              <span className="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white dark:bg-zinc-800 dark:text-emerald-400">
+                PWA
+              </span>
+            </div>
             <p className="hidden text-[11px] text-slate-500 dark:text-zinc-400 sm:block">
-              Control de Proyectos y Presupuestos
+              Sistema Interno de Producción y Presupuestos
             </p>
           </div>
         </div>
 
-        {/* Controles: Usuario Activo + Actividad + Tema Claro/Oscuro */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        {/* Controles: Volver a Landing + Instalar PWA + Usuario Activo + Actividad + Tema */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          {deferredPrompt && onInstallPwa && (
+            <button
+              type="button"
+              onClick={onInstallPwa}
+              className="flex items-center gap-1.5 rounded-xl bg-[#E73913] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#c92f0e]"
+              title="Instalar Kinok OS como aplicación PWA en tu dispositivo"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Instalar App</span>
+            </button>
+          )}
+
+          {onBackToLanding && (
+            <button
+              type="button"
+              onClick={onBackToLanding}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-zinc-800 dark:bg-zinc-800/70 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              title="Volver al portafolio público de Kinok"
+            >
+              <Globe className="h-3.5 w-3.5 text-[#E73913]" />
+              <span className="hidden sm:inline">Landing Pública</span>
+            </button>
+          )}
+
           {/* Usuario Activo Compacto */}
           <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-zinc-800 dark:bg-zinc-800/60 md:flex">
             <span

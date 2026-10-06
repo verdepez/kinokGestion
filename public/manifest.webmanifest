@@ -1,0 +1,21 @@
+{
+  "name": "Kinok OS — Sistema Interno de Producción",
+  "short_name": "Kinok OS",
+  "description": "Sistema interno de cotizaciones, presupuestos, control de rodaje y portal freelance de Kinok Productora Audiovisual.",
+  "start_url": "/?app=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0c0c0b",
+  "theme_color": "#e73913",
+  "lang": "es-CL",
+  "icons": [
+    {
+      "src": "/kinok-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
