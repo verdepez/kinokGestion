@@ -51,6 +51,27 @@ export function formatCLP(amount) {
 }
 
 /**
+ * Formatea montos resumidos en millones (ej: $30.4MM) o miles (ej: $218K)
+ * para tarjetas de resumen compactas en mosaico.
+ */
+export function formatCompactCLP(amount, withSymbol = true) {
+  const num = Number(amount) || 0;
+  const sign = num < 0 ? '-' : '';
+  const prefix = withSymbol ? '$' : '';
+  const abs = Math.abs(num);
+
+  if (abs >= 1_000_000) {
+    const millions = (abs / 1_000_000).toFixed(1);
+    return `${sign}${prefix}${millions}MM`;
+  }
+  if (abs >= 1_000) {
+    const thousands = Math.round(abs / 1_000);
+    return `${sign}${prefix}${thousands}K`;
+  }
+  return `${sign}${prefix}${Math.round(abs)}`;
+}
+
+/**
  * Formatea un porcentaje con 1 decimal (formato chileno con coma).
  */
 export function formatPct(value, decimals = 1) {
@@ -220,9 +241,11 @@ export function computeProjectMetrics(project) {
     costoDirectoTotal,
     margenPct,
     margenUtilidad,
+    margenComercialCLP: margenUtilidad,
     precioVentaNeto,
     ivaDebito,
     totalFacturable,
+    precioVentaBruto: totalFacturable,
     costoRealTotal,
     totalRetencionesBHE,
     totalLiquidoPagado,

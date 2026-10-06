@@ -6,55 +6,54 @@ Plataforma de gestión operativa, planificación temporal, control presupuestari
 
 ## Cómo funciona la plataforma
 
-### 1. Estimador Automatizado de Cronograma y Gantt (`Schedule Estimator`)
-Al crear un nuevo proyecto desde el botón **`+ Nuevo Proyecto (Estimador)`**, se abre un asistente interactivo en dos pasos que reemplaza la selección manual de fases por un motor proporcional basado en estándares de la industria audiovisual:
+### 1. Flujo de Cotización ("Cotizar Proyecto"), Estimador Dinámico y Generación de PDF
+Desde el botón **`+ Cotizar Proyecto`**, se abre un asistente comercial y técnico en dos pasos:
 
-- **Selección de Tipo de Producción y Distribución Proporcional:**
-  | Tipo de Producción | Código | Duración Sugerida | Preproducción (`PRE_PRODUCTION`) | Producción / Rodaje (`PRODUCTION`) | Postproducción (`POST_PRODUCTION`) |
-  | :--- | :--- | :--- | :---: | :---: | :---: |
-  | **Comercial / Corporativo** | `video_corporativo` | 4 a 8 semanas (28–56 días) | **35%** | **10%** | **55%** |
-  | **Cortometraje** | `cortometraje` | 2 a 4 meses (60–120 días) | **35%** | **15%** | **50%** |
-  | **Largometraje** | `largometraje` | 1.5 a 2.5 años (540–900 días) | **25%** | **15%** | **60%** |
-  | **Personalizado** | `personalizado` | Libre | **35%** | **15%** | **50%** |
+- **Paso 1 — Rango de Fechas Dinámico y Estimador Gantt:**
+  - Al seleccionar el **Tipo de Producción**, la **Fecha de Entrega / Lanzamiento** se recalcula automáticamente en base a la duración estándar del formato:
+    | Tipo de Producción | Código | Duración Sugerida | Preproducción (`PRE_PRODUCTION`) | Producción / Rodaje (`PRODUCTION`) | Postproducción (`POST_PRODUCTION`) |
+    | :--- | :--- | :--- | :---: | :---: | :---: |
+    | **Comercial / Corporativo** | `video_corporativo` | 4 a 8 semanas (28–56 días) | **35%** | **10%** | **55%** |
+    | **Cortometraje** | `cortometraje` | 2 a 4 meses (60–120 días) | **35%** | **15%** | **50%** |
+    | **Largometraje** | `largometraje` | 1.5 a 2.5 años (540–900 días) | **25%** | **15%** | **60%** |
+    | **Personalizado** | `personalizado` | Libre | **35%** | **15%** | **60%** |
+  - Incluye **Calendario Interactivo de Rango de Fechas (`Date-Range Picker`)**, **Diagrama Gantt** con ajuste manual de hitos (`-1d` / `+1d`) y alertas de cuello de botella.
 
-- **Calendario Interactivo de Rango de Fechas (`Date-Range Picker`):**
-  - Permite seleccionar con clic la **Fecha de Inicio** y la **Fecha Estimada de Entrega/Lanzamiento** sobre el calendario mensual, coloreando cada día según la etapa correspondiente (`Preproducción`, `Rodaje`, `Postproducción` y `Lanzamiento`).
-- **Previsualización en Diagrama Gantt y Ajuste de Hitos:**
-  - Muestra en tiempo real una barra Gantt proporcional con la duración en días y porcentaje de cada etapa.
-  - El usuario puede **ajustar las fechas límite de cada hito** (`Fin Preproducción` y `Fin Producción / Rodaje` mediante selector de fecha o botones `-1d` / `+1d`) antes de confirmar la creación.
-- **Alertas de Estándar de Industria:**
-  - Si el tiempo asignado a **Preproducción** o **Postproducción** es críticamente corto respecto al estándar del formato elegido, el estimador muestra alertas preventivas de cuello de botella.
-- **Asignación Automática de Fase:**
-  - La fase activa inicial del proyecto se infiere automáticamente comparando la fecha actual con los hitos del cronograma.
+- **Paso 2 — Lanzamiento y Presupuesto + PDF de Cotización:**
+  - Permite configurar las 4 partidas de costo directo (`Personal Técnico`, `Equipamiento`, `Logística/Viáticos`, `Imprevistos`), el **Margen Comercial (%)**, **Partner de Distribución**, contacto del cliente, validez de la oferta y condiciones comerciales.
+  - Los botones **`Generar Cotización`** y **`Generar PDF Cotización`** guardan automáticamente los datos como proyecto en estado de cotización (`PENDING_APPROVAL`) y descargan un documento **PDF A4 profesional** listo para compartir por **WhatsApp** o **Correo Electrónico**.
+  - Una vez que el cliente aprueba el presupuesto, el usuario presiona **`Confirmar Presupuesto`** en la plataforma y el proyecto se activa inmediatamente en los flujos de trabajo Kanban.
 
 ---
 
-### 2. Ciclo de Vida Semántico de Estados y Fases
-Se deprecó el estado genérico `Cerrado` (`CLOSED`) para reflejar el flujo real de una productora audiovisual a través de 4 fases estandarizadas:
+### 2. Ciclo de Vida Semántico y Acordeones Mobile por Fase
+El ciclo de vida del proyecto se organiza en 4 fases estandarizadas:
+1. **`PRE_PRODUCTION` (Preproducción)**
+2. **`PRODUCTION` (Producción / Rodaje)**
+3. **`POST_PRODUCTION` (Postproducción)**
+4. **`DELIVERY_LAUNCH` (Entrega / Lanzamiento)**
 
-1. **`PRE_PRODUCTION` (Preproducción):** Guion técnico, scouting, casting, diseño de producción y plan de rodaje.
-2. **`PRODUCTION` (Producción / Rodaje):** Rodaje principal en locación o estudio, sonido directo y dailies.
-3. **`POST_PRODUCTION` (Postproducción):** Montaje offline/online, VFX, mezcla de sonido, color grading y rondas de revisión.
-4. **`DELIVERY_LAUNCH` (Entrega / Lanzamiento):** Masterización final, entrega a cliente y distribución. Incluye soporte para asociar un **Partner de Distribución / Agencia de Lanzamiento** tanto en la creación como en la vista de detalle del proyecto.
-
----
-
-### 3. Control de Acceso Basado en Roles (RBAC) y Finanzas SII (Chile 2026)
-- **Director (`director`):**
-  - Acceso completo al tablero Kanban por fases, KPIs de flujo de caja neto, provisión F29, presupuestador por partidas (`Personal Técnico`, `Equipamiento`, `Logística/Viáticos`, `Imprevistos`), registro de gastos reales y control de alcance en revisiones de video.
-- **Colaborador Freelance (`freelance`):**
-  - Portal enfocado exclusivamente en sus tareas asignadas y carga de **Boletas de Honorarios Electrónicas (BHE)**.
-  - Cualquier intento de acceder a rutas financieras administrativas (`/admin/finanzas`) es bloqueado con **HTTP 403 Forbidden** y registrado en el historial de auditoría.
-- **Motor Tributario Chileno (SII 2026):**
-  - Cálculo en vivo de **IVA Débito (19%)** sobre precio de venta neto y **Retención de Boletas de Honorarios (15,25% — Ley 21.133)**.
-  - **Semáforo presupuestario:** Verde (`< 90%` En regla), Amarillo (`≥ 90%` Alerta preventiva) y Rojo (`≥ 100%` Sobrecosto).
+- **Acordeón Desplegable en Mobile:** En pantallas móviles (`< lg`), cada grupo (`Preproducción`, `Producción / Rodaje`, `Postproducción` y `Entrega / Lanzamiento`) se agrupa en un acordeón desplegable con barra de acceso rápido. Al cambiar un proyecto de estado, pasa automáticamente al grupo destino, despliega su acordeón y muestra un aviso de confirmación.
 
 ---
 
-### 4. Persistencia con PostgreSQL y Despliegue en Railway
-- El servidor Express (`server.js`) sirve el frontend compilado (`dist/`) y se conecta automáticamente a PostgreSQL mediante la variable de entorno `DATABASE_URL`.
-- Al iniciar, crea automáticamente las tablas `projects` y `audit_logs`, ejecuta migraciones no destructivas (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`) para las columnas de cronograma (`project_type`, `start_date`, `end_date`, `phase_schedule`, `distribution_partner`) y normaliza cualquier estado antiguo (`Cerrado` → `DELIVERY_LAUNCH`).
-- Si se ejecuta en local sin `DATABASE_URL`, opera de forma transparente con almacenamiento en memoria.
+### 3. Mosaico de Resumen (2x2), Formato `MM`/`K` y Apartado de Finanzas
+- **Mosaico de 4 Tarjetas KPI:** Se visualiza en una cuadrícula `2x2` en mobile y `4` columnas en desktop, resumiendo las cifras en millones con **`MM`** (ej. `$30.4MM`) y miles con **`K`** (ej. `$218K`).
+- **Interacción por Tap:**
+  - **Tap en *"En Ejecución Activa"*:** Desplaza suavemente la pantalla hasta el apartado de los acordeones de fases.
+  - **Tap en *"Flujo de Caja Neto"*, *"Provisión F29 (SII)"* o *"Presupuesto Ejecutado"*:** Despliega el **Apartado de Finanzas (Detalle Asociado)** con el desglose numérico completo y el detalle proyecto por proyecto.
+
+---
+
+### 4. Control de Acceso Basado en Roles (RBAC) y Finanzas SII (Chile 2026)
+- **Director (`director`):** Acceso completo al tablero Kanban, finanzas, cotizaciones y control de alcance.
+- **Colaborador Freelance (`freelance`):** Portal enfocado en sus tareas y carga de **Boletas de Honorarios Electrónicas (BHE)**; acceso bloqueado (`HTTP 403 Forbidden`) a `/admin/finanzas` con registro de auditoría.
+- **Motor Tributario Chileno (SII 2026):** Cálculo en vivo de **IVA Débito (19%)** y **Retención BHE (15,25% — Ley 21.133)** con semáforo presupuestario (`En regla`, `Alerta`, `Sobrecosto`).
+
+---
+
+### 5. Persistencia con PostgreSQL y Despliegue en Railway
+- El servidor Express (`server.js`) sirve el frontend compilado (`dist/`) y sincroniza con PostgreSQL mediante `DATABASE_URL` (incluyendo migraciones automáticas de columnas de cronograma y cotización: `quote_status`, `client_contact`, `quote_validity_days`, `quote_notes`, `quote_generated_at`).
 
 ---
 
