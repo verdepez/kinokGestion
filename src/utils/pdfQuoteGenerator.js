@@ -215,61 +215,57 @@ export function generateQuotePdfBlob(projectData) {
     yPhase -= 20;
   });
 
-  // SECCIÓN 3: PRESUPUESTO Y DESGLOSE COMERCIAL ($ CLP)
-  text(40, 448, 11, 'F2', '3. DESGLOSE DE PRESUPUESTO Y PROPUESTA ECONOMICA (CLP)', 0.05, 0.35, 0.26);
+  // SECCIÓN 3: PRESUPUESTO Y DESGLOSE COMERCIAL ($ CLP) CON MARGEN INTEGRADO EN CADA ENUNCIADO
+  text(40, 448, 11, 'F2', '3. DESGLOSE DE PARTIDAS Y PROPUESTA ECONOMICA (CLP)', 0.05, 0.35, 0.26);
+
+  const catMap = {};
+  (metrics.categoryBreakdown || []).forEach((c) => {
+    catMap[c.id] = c.quotedNet;
+  });
 
   const budgetRows = [
     {
-      label: 'Personal Tecnico y Direccion (Equipo de Rodaje y Post)',
-      amount: formatCLP(cats.personal_tecnico || 0),
+      label: '1. Personal Tecnico, Direccion y Equipo de Realizacion (Pre, Rodaje y Post)',
+      amount: formatCLP(catMap.personal_tecnico || 0),
     },
     {
-      label: 'Equipamiento Cinematografico (Camara, Opticas, Iluminacion, Sonido)',
-      amount: formatCLP(cats.equipamiento || 0),
+      label: '2. Equipamiento Cinematografico (Camara, Opticas, Iluminacion y Sonido)',
+      amount: formatCLP(catMap.equipamiento || 0),
     },
     {
-      label: 'Logistica, Transporte, Locaciones y Viaticos de Produccion',
-      amount: formatCLP(cats.logistica_viaticos || 0),
+      label: '3. Logistica Operativa, Transporte, Locaciones y Viaticos de Produccion',
+      amount: formatCLP(catMap.logistica_viaticos || 0),
     },
     {
-      label: 'Imprevistos y Reserva de Contingencia Operativa',
-      amount: formatCLP(cats.imprevistos_contingencia || 0),
-    },
-    {
-      label: `Honorarios de Produccion Ejecutiva y Margen Comercial (${
-        projectData.desiredMarginPct || 35
-      }%)`,
-      amount: formatCLP(metrics.margenComercialCLP || 0),
+      label: '4. Reserva Operativa, Imprevistos de Set y Contingencia Tecnica',
+      amount: formatCLP(catMap.imprevistos_contingencia || 0),
     },
   ];
 
-  let yBudget = 422;
+  let yBudget = 420;
   budgetRows.forEach((item, idx) => {
     if (idx % 2 === 0) {
-      rectFill(40, yBudget - 6, 515, 21, 0.97, 0.98, 0.99);
+      rectFill(40, yBudget - 7, 515, 24, 0.97, 0.98, 0.99);
     }
-    rectStroke(40, yBudget - 6, 515, 21, 0.88, 0.9, 0.92, 0.5);
+    rectStroke(40, yBudget - 7, 515, 24, 0.88, 0.9, 0.92, 0.5);
     text(50, yBudget, 8.5, 'F1', item.label);
     text(455, yBudget, 9, 'F2', item.amount);
-    yBudget -= 21;
+    yBudget -= 24;
   });
 
-  // Caja de Totales (Neto, IVA 19%, Total Bruto)
-  rectFill(280, 225, 275, 82, 0.95, 0.98, 0.96);
-  rectStroke(280, 225, 275, 82, 0.1, 0.55, 0.4, 1);
+  // Caja de Totales (Subtotal Neto Partidas, IVA 19%, Total Bruto)
+  rectFill(280, 225, 275, 76, 0.95, 0.98, 0.96);
+  rectStroke(280, 225, 275, 76, 0.1, 0.55, 0.4, 1);
 
-  text(295, 287, 9, 'F1', 'Costo Directo de Produccion:', 0.3, 0.35, 0.4);
-  text(455, 287, 9, 'F1', formatCLP(metrics.costoDirectoTotal));
+  text(295, 278, 9.5, 'F2', 'VALOR NETO COTIZACION:');
+  text(455, 278, 9.5, 'F2', formatCLP(metrics.precioVentaNeto));
 
-  text(295, 269, 9.5, 'F2', 'VALOR NETO COTIZACION:');
-  text(455, 269, 9.5, 'F2', formatCLP(metrics.precioVentaNeto));
+  text(295, 256, 9, 'F1', 'IVA Debito Fiscal (19% SII):', 0.3, 0.35, 0.4);
+  text(455, 256, 9, 'F1', formatCLP(metrics.ivaDebito));
 
-  text(295, 251, 9, 'F1', 'IVA Debito Fiscal (19% SII):', 0.3, 0.35, 0.4);
-  text(455, 251, 9, 'F1', formatCLP(metrics.ivaDebito));
-
-  rectFill(280, 225, 275, 20, 0.04, 0.29, 0.22);
-  text(295, 231, 10, 'F2', 'TOTAL PROPUESTA (CON IVA):', 1, 1, 1);
-  text(455, 231, 10.5, 'F2', formatCLP(metrics.precioVentaBruto), 0.75, 0.98, 0.88);
+  rectFill(280, 225, 275, 22, 0.04, 0.29, 0.22);
+  text(295, 232, 10, 'F2', 'TOTAL PROPUESTA (CON IVA):', 1, 1, 1);
+  text(455, 232, 10.5, 'F2', formatCLP(metrics.precioVentaBruto), 0.75, 0.98, 0.88);
 
   // Notas y condiciones comerciales a la izquierda de los totales
   text(40, 292, 9.5, 'F2', 'Condiciones Comerciales:', 0.15, 0.2, 0.28);
@@ -400,6 +396,10 @@ export function buildWhatsAppQuoteUrl(projectData) {
           projectType: projectData.projectType || 'video_corporativo',
         });
 
+  const itemLines = (metrics.categoryBreakdown || []).map(
+    (c) => `  - ${c.label}: ${formatCLP(c.quotedNet)}`
+  );
+
   const message = [
     `*COTIZACIÓN KINOK PRODUCCIONES (${projectData.code || 'COT-2026'})*`,
     `Hola *${projectData.client}*, te compartimos el resumen de cotización y cronograma para el proyecto *${projectData.name}*:`,
@@ -411,12 +411,15 @@ export function buildWhatsAppQuoteUrl(projectData) {
       ? `• *Partner de Lanzamiento:* ${projectData.distributionPartner}`
       : null,
     ``,
-    `*PROPUESTA ECONÓMICA (CLP):*`,
-    `• Valor Neto: *${formatCLP(metrics.precioVentaNeto)}*`,
+    `*DESGLOSE DE PARTIDAS (VALOR NETO):*`,
+    ...itemLines,
+    ``,
+    `*RESUMEN ECONÓMICO (CLP):*`,
+    `• Subtotal Neto: *${formatCLP(metrics.precioVentaNeto)}*`,
     `• IVA (19%): ${formatCLP(metrics.ivaDebito)}`,
     `• *Total con IVA: ${formatCLP(metrics.precioVentaBruto)}*`,
     ``,
-    `Adjuntamos el documento PDF con el desglose de partidas y cronograma por fases. Quedamos atentos a su confirmación para activar el flujo de preproducción.`,
+    `Adjuntamos el documento PDF con el detalle de la propuesta. Quedamos atentos a su confirmación para activar el flujo de preproducción.`,
   ]
     .filter((line) => line !== null)
     .join('\n');
@@ -441,6 +444,10 @@ export function buildMailtoQuoteUrl(projectData) {
           projectType: projectData.projectType || 'video_corporativo',
         });
 
+  const itemLines = (metrics.categoryBreakdown || []).map(
+    (c) => `- ${c.label}: ${formatCLP(c.quotedNet)}`
+  );
+
   const subject = `Cotización Audiovisual Kinok (${projectData.code || 'COT-2026'}) - ${
     projectData.name
   }`;
@@ -458,7 +465,10 @@ export function buildMailtoQuoteUrl(projectData) {
       ? `- Partner de Distribución / Agencia: ${projectData.distributionPartner}`
       : null,
     ``,
-    `2. RESUMEN PRESUPUESTARIO (CLP):`,
+    `2. DESGLOSE DE PARTIDAS (VALORES NETOS CLP):`,
+    ...itemLines,
+    ``,
+    `3. TOTALES PROPUESTA (CLP):`,
     `- Valor Neto Propuesta: ${formatCLP(metrics.precioVentaNeto)}`,
     `- IVA (19%): ${formatCLP(metrics.ivaDebito)}`,
     `- TOTAL CON IVA: ${formatCLP(metrics.precioVentaBruto)}`,

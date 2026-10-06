@@ -210,19 +210,37 @@ export function computeProjectMetrics(project) {
 
   const semaphore = getSemaphoreStatus(costoRealTotal, costoDirectoTotal);
 
-  // Semáforos individuales por partida
-  const categoryBreakdown = BUDGET_CATEGORIES.map((cat) => {
+  // Semáforos individuales por partida + Margen comercial integrado en cada enunciado
+  let accumulatedMargin = 0;
+  const rawCategories = BUDGET_CATEGORIES.map((cat) => {
     const budgeted = Number(budgetByCat[cat.id]) || 0;
     const spent = Number(realByCat[cat.id]) || 0;
     const variance = budgeted - spent;
     const catSemaphore = getSemaphoreStatus(spent, budgeted);
+    const itemMargin = Math.round(budgeted * (margenPct / 100));
+    accumulatedMargin += itemMargin;
     return {
       ...cat,
       budgeted,
+      marginAmount: itemMargin,
+      quotedNet: budgeted + itemMargin,
       spent,
       variance,
       semaphore: catSemaphore,
     };
+  });
+
+  // Ajuste de redondeo en el último enunciado con presupuesto para cuadrar exactamente con precioVentaNeto
+  const roundingDiff = margenUtilidad - accumulatedMargin;
+  const categoryBreakdown = rawCategories.map((item, idx) => {
+    if (roundingDiff !== 0 && idx === rawCategories.length - 1 && costoDirectoTotal > 0) {
+      return {
+        ...item,
+        marginAmount: item.marginAmount + roundingDiff,
+        quotedNet: item.quotedNet + roundingDiff,
+      };
+    }
+    return item;
   });
 
   // Margen comercial real actual (Precio Venta Neto - Costo Real Devengado)

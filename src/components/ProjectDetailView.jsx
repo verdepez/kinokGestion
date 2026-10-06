@@ -436,15 +436,15 @@ export default function ProjectDetailView({
          ======================================================================= */}
       {activeTab === 'presupuesto' && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* Izquierda: Partidas Presupuestarias */}
+          {/* Izquierda: Partidas Presupuestarias con Margen Integrado */}
           <div className="lg:col-span-7">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <div className="border-b border-slate-100 pb-3 dark:border-zinc-800">
                 <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-                  Presupuesto por Categoría
+                  Enunciados de Presupuesto y Negociación
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
-                  Ajusta los montos presupuestados para recalcular la cotización automáticamente
+                  Ajusta los costos base de cada enunciado para negociar el precio final (el margen del {metrics.margenPct}% se integra automáticamente en cada partida).
                 </p>
               </div>
 
@@ -457,11 +457,20 @@ export default function ProjectDetailView({
                       className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-zinc-800 dark:bg-zinc-950/80"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`h-2 w-2 rounded-full ${catSem.dotClass}`} />
-                          <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
-                            {cat.label}
-                          </h3>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className={`h-2 w-2 rounded-full ${catSem.dotClass}`} />
+                            <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
+                              {cat.label}
+                            </h3>
+                          </div>
+                          <p className="mt-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                            Valor Cotizado Cliente (c/margen):{' '}
+                            <strong className="font-mono">{formatCLP(cat.quotedNet)}</strong>{' '}
+                            <span className="text-[10px] text-slate-400 dark:text-zinc-500">
+                              (incluye +{formatCLP(cat.marginAmount)} margen)
+                            </span>
+                          </p>
                         </div>
 
                         <div className="flex items-center gap-1.5">
@@ -487,7 +496,7 @@ export default function ProjectDetailView({
                               type="number"
                               step="50000"
                               min="0"
-                              aria-label={`Presupuesto para ${cat.label}`}
+                              aria-label={`Costo base para ${cat.label}`}
                               value={cat.budgeted}
                               onChange={(e) =>
                                 onUpdateBudgetCategory(
@@ -524,7 +533,7 @@ export default function ProjectDetailView({
                             Gastado: <strong className={catSem.textClass}>{formatCLP(cat.spent)}</strong> ({formatPct(catSem.ratio, 0)})
                           </span>
                           <span>
-                            Disponible:{' '}
+                            Disponible costo base:{' '}
                             <strong
                               className={
                                 cat.variance < 0
@@ -544,7 +553,7 @@ export default function ProjectDetailView({
             </div>
           </div>
 
-          {/* Derecha: Resumen de Cotización al Cliente */}
+          {/* Derecha: Resumen de Cotización al Cliente (con Margen Integrado en los Enunciados) */}
           <div className="lg:col-span-5">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <div className="border-b border-slate-100 pb-3 dark:border-zinc-800">
@@ -552,18 +561,18 @@ export default function ProjectDetailView({
                   Cotización al Cliente
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
-                  Cálculo automático de margen e IVA (19%)
+                  Margen comercial integrado en cada enunciado + IVA (19%)
                 </p>
               </div>
 
-              {/* Control de Margen */}
+              {/* Control de Margen Integrado */}
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="flex items-center justify-between">
                   <label
                     htmlFor="desired-margin-input"
                     className="text-xs font-semibold text-slate-700 dark:text-zinc-300"
                   >
-                    Margen de Ganancia (%)
+                    Margen Integrado en Enunciados (%)
                   </label>
                   <div className="flex items-center gap-1">
                     <input
@@ -599,21 +608,22 @@ export default function ProjectDetailView({
                 />
               </div>
 
-              {/* Resumen Limpio */}
-              <div className="mt-4 space-y-2.5 text-xs">
-                <div className="flex items-center justify-between py-1.5 text-slate-600 dark:text-zinc-300">
-                  <span>Costo Directo (Presupuesto)</span>
-                  <span className="font-mono text-sm font-semibold text-slate-900 dark:text-white">
-                    {formatCLP(metrics.costoDirectoTotal)}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between py-1.5 text-slate-600 dark:text-zinc-300">
-                  <span>+ Margen Comercial ({metrics.margenPct}%)</span>
-                  <span className="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    + {formatCLP(metrics.margenUtilidad)}
-                  </span>
-                </div>
+              {/* Enunciados Cotizados con Margen Integrado (Vista Cliente) */}
+              <div className="mt-4 space-y-2 text-xs">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Enunciados de la Propuesta (Valor Neto c/Margen)
+                </span>
+                {metrics.categoryBreakdown.map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-slate-700 dark:bg-zinc-950 dark:text-zinc-300"
+                  >
+                    <span>{cat.label}</span>
+                    <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                      {formatCLP(cat.quotedNet)}
+                    </span>
+                  </div>
+                ))}
 
                 <div className="flex items-center justify-between border-t border-slate-200 pt-2.5 font-semibold text-slate-900 dark:border-zinc-800 dark:text-white">
                   <span>Precio de Venta Neto</span>
@@ -635,11 +645,20 @@ export default function ProjectDetailView({
                       Total a Facturar (c/IVA)
                     </p>
                     <p className="text-[11px] text-emerald-600 dark:text-emerald-400/80">
-                      Factura Electrónica SII
+                      Precio Final Negociado · Factura SII
                     </p>
                   </div>
                   <span className="font-mono text-xl font-extrabold text-emerald-700 dark:text-emerald-300">
                     {formatCLP(metrics.totalFacturable)}
+                  </span>
+                </div>
+
+                {/* Nota de Control Interno solo para el Director */}
+                <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-slate-200 px-3 py-2 text-[11px] text-slate-500 dark:border-zinc-800 dark:text-zinc-400">
+                  <span>Control Interno Director:</span>
+                  <span className="font-mono">
+                    Costo: {formatCLP(metrics.costoDirectoTotal)} · Utilidad: +
+                    {formatCLP(metrics.margenUtilidad)}
                   </span>
                 </div>
               </div>

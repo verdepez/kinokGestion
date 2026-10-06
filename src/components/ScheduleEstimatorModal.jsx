@@ -28,7 +28,12 @@ import {
   formatShortDateES,
   getPhaseMeta,
 } from '../utils/scheduleEstimator';
-import { IVA_RATE, formatCLP } from '../utils/finance';
+import {
+  IVA_RATE,
+  BUDGET_CATEGORIES,
+  computeProjectMetrics,
+  formatCLP,
+} from '../utils/finance';
 import {
   downloadQuotePdf,
   buildWhatsAppQuoteUrl,
@@ -244,17 +249,16 @@ export default function ScheduleEstimatorModal({
     return 'POST_PRODUCTION';
   };
 
-  const totalBudget =
-    (Number(budget.personal_tecnico) || 0) +
-    (Number(budget.equipamiento) || 0) +
-    (Number(budget.logistica_viaticos) || 0) +
-    (Number(budget.imprevistos_contingencia) || 0);
-
   const clampedMargin = Math.min(85, Math.max(5, Number(desiredMarginPct) || 35));
-  const precioVentaNeto = Math.round(totalBudget / (1 - clampedMargin / 100));
-  const margenComercialCLP = precioVentaNeto - totalBudget;
-  const ivaDebito = Math.round(precioVentaNeto * IVA_RATE);
-  const precioVentaBruto = precioVentaNeto + ivaDebito;
+  const quoteMetrics = computeProjectMetrics({
+    budgetCategories: budget,
+    desiredMarginPct: clampedMargin,
+  });
+  const totalBudget = quoteMetrics.costoDirectoTotal;
+  const precioVentaNeto = quoteMetrics.precioVentaNeto;
+  const margenComercialCLP = quoteMetrics.margenComercialCLP;
+  const ivaDebito = quoteMetrics.ivaDebito;
+  const precioVentaBruto = quoteMetrics.precioVentaBruto;
 
   const buildPayload = () => ({
     existingId: generatedQuoteProject?.id || null,
@@ -954,21 +958,21 @@ export default function ScheduleEstimatorModal({
               </div>
             </div>
 
-            {/* Presupuesto por Partida y Margen Comercial */}
+            {/* Presupuesto por Enunciado con Margen Integrado para Negociación */}
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/70">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-                    Presupuesto Directo y Margen Comercial ($ CLP)
+                    Enunciados de Cotización con Margen Integrado ($ CLP)
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                    Define los costos por partida y el margen deseado para calcular el precio neto y total con IVA.
+                    El margen ({clampedMargin}%) se integra directamente en cada enunciado (no como ítem aparte) para que puedas ajustar los costos base y negociar el precio final.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    Margen Comercial (%):
+                    Margen Integrado (%):
                   </label>
                   <div className="flex items-center gap-1">
                     {[25, 30, 35, 40].map((preset) => (
@@ -998,113 +1002,119 @@ export default function ScheduleEstimatorModal({
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs text-slate-500 dark:text-zinc-400">
-                    Personal Técnico
-                  </label>
-                  <input
-                    type="number"
-                    step="50000"
-                    min="0"
-                    value={budget.personal_tecnico}
-                    onChange={(e) =>
-                      setBudget({
-                        ...budget,
-                        personal_tecnico: Number(e.target.value),
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-mono text-xs text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-500 dark:text-zinc-400">
-                    Equipamiento (Cámara, Ópticas, Luz)
-                  </label>
-                  <input
-                    type="number"
-                    step="50000"
-                    min="0"
-                    value={budget.equipamiento}
-                    onChange={(e) =>
-                      setBudget({
-                        ...budget,
-                        equipamiento: Number(e.target.value),
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-mono text-xs text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-500 dark:text-zinc-400">
-                    Logística / Viáticos
-                  </label>
-                  <input
-                    type="number"
-                    step="50000"
-                    min="0"
-                    value={budget.logistica_viaticos}
-                    onChange={(e) =>
-                      setBudget({
-                        ...budget,
-                        logistica_viaticos: Number(e.target.value),
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-mono text-xs text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-500 dark:text-zinc-400">
-                    Imprevistos / Contingencia
-                  </label>
-                  <input
-                    type="number"
-                    step="50000"
-                    min="0"
-                    value={budget.imprevistos_contingencia}
-                    onChange={(e) =>
-                      setBudget({
-                        ...budget,
-                        imprevistos_contingencia: Number(e.target.value),
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-mono text-xs text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                  />
-                </div>
+                {quoteMetrics.categoryBreakdown.map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-zinc-100">
+                          {cat.label}
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-zinc-500">
+                          {cat.description}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-400">
+                          Valor Cotizado (c/margen)
+                        </span>
+                        <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatCLP(cat.quotedNet)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2 dark:border-zinc-800">
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        Costo base:{' '}
+                        <strong className="font-mono text-slate-700 dark:text-zinc-300">
+                          {formatCLP(cat.budgeted)}
+                        </strong>{' '}
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                          (+{formatCLP(cat.marginAmount)} margen)
+                        </span>
+                      </span>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setBudget({
+                              ...budget,
+                              [cat.id]: Math.max(0, (Number(budget[cat.id]) || 0) - 100000),
+                            })
+                          }
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                        >
+                          -100k
+                        </button>
+                        <input
+                          type="number"
+                          step="50000"
+                          min="0"
+                          aria-label={`Costo base para ${cat.label}`}
+                          value={budget[cat.id]}
+                          onChange={(e) =>
+                            setBudget({
+                              ...budget,
+                              [cat.id]: Math.max(0, Number(e.target.value) || 0),
+                            })
+                          }
+                          className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-semibold text-slate-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setBudget({
+                              ...budget,
+                              [cat.id]: (Number(budget[cat.id]) || 0) + 100000,
+                            })
+                          }
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                        >
+                          +100k
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {/* Resumen Financiero + Botón Generar Cotización */}
+              {/* Resumen Financiero de Negociación + Botón Generar Cotización */}
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
                   <div>
                     <span className="block text-[10px] font-medium uppercase text-slate-400">
-                      Costo Directo
+                      Suma Enunciados (Neto Cliente)
                     </span>
-                    <span className="font-mono text-xs font-bold text-slate-800 dark:text-zinc-200">
-                      {formatCLP(totalBudget)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] font-medium uppercase text-slate-400">
-                      Margen ({clampedMargin}%)
-                    </span>
-                    <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                      +{formatCLP(margenComercialCLP)}
+                    <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+                      {formatCLP(precioVentaNeto)}
                     </span>
                   </div>
                   <div>
                     <span className="block text-[10px] font-medium uppercase text-slate-400">
-                      Valor Neto + IVA 19%
+                      IVA Débito (19%)
                     </span>
                     <span className="font-mono text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                      {formatCLP(precioVentaNeto)} + {formatCLP(ivaDebito)}
+                      {formatCLP(ivaDebito)}
                     </span>
                   </div>
                   <div>
                     <span className="block text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400">
-                      Total Cotización (IVA incl.)
+                      Precio Final (c/IVA)
                     </span>
                     <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-300">
                       {formatCLP(precioVentaBruto)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-medium uppercase text-slate-400">
+                      Control Interno Director
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-500 dark:text-zinc-400">
+                      Costo: {formatCLP(totalBudget)} · Utilidad: +{formatCLP(margenComercialCLP)}
                     </span>
                   </div>
                 </div>
