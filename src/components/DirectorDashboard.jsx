@@ -20,6 +20,8 @@ import {
   FileText,
   X,
   ArrowDown,
+  SlidersHorizontal,
+  RotateCcw,
 } from 'lucide-react';
 import {
   PROJECT_PHASES,
@@ -38,6 +40,7 @@ import {
   buildMailtoQuoteUrl,
 } from '../utils/pdfQuoteGenerator';
 import ScheduleEstimatorModal from './ScheduleEstimatorModal';
+import NativeModal from './NativeModal';
 
 export default function DirectorDashboard({
   projects,
@@ -49,6 +52,8 @@ export default function DirectorDashboard({
   onClearPhaseTransition,
 }) {
   const [semaphoreFilter, setSemaphoreFilter] = useState('all');
+  const [phaseFilter, setPhaseFilter] = useState('all');
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
   // Apartado de Finanzas desplegable al hacer tap en las tarjetas financieras ('cashflow' | 'f29' | 'budget' | null)
@@ -89,18 +94,24 @@ export default function DirectorDashboard({
     }));
   };
 
-  const allExpanded = PROJECT_PHASES.every((ph) => openPhases[ph.id]);
+  const visiblePhases =
+    phaseFilter === 'all'
+      ? PROJECT_PHASES
+      : PROJECT_PHASES.filter((ph) => ph.id === phaseFilter);
+
+  const allExpanded = visiblePhases.every((ph) => openPhases[ph.id]);
 
   const handleToggleAllAccordions = () => {
     const nextState = !allExpanded;
-    const updated = {};
-    PROJECT_PHASES.forEach((ph) => {
+    const updated = { ...openPhases };
+    visiblePhases.forEach((ph) => {
       updated[ph.id] = nextState;
     });
     setOpenPhases(updated);
   };
 
   const handleFocusPhaseMobile = (phaseId) => {
+    setPhaseFilter('all');
     setOpenPhases((prev) => ({
       ...prev,
       [phaseId]: true,
@@ -111,6 +122,21 @@ export default function DirectorDashboard({
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 60);
+  };
+
+  const handleSelectPhaseFilter = (nextPhaseId) => {
+    setPhaseFilter(nextPhaseId);
+    if (nextPhaseId !== 'all') {
+      setOpenPhases((prev) => ({
+        ...prev,
+        [nextPhaseId]: true,
+      }));
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSemaphoreFilter('all');
+    setPhaseFilter('all');
   };
 
   // Al hacer tap en "En Ejecución Activa", moverse hasta el apartado de los acordeones
@@ -268,78 +294,69 @@ export default function DirectorDashboard({
   const presupuestoEjecutadoPct =
     (totals.costoRealDevengado / (totals.costoDirectoPresupuestado || 1)) * 100;
 
-  const filteredProjects = workflowProjects.filter((p) => {
+  // Filtrado por estado presupuestario (semáforo)
+  const statusFilteredProjects = workflowProjects.filter((p) => {
     if (semaphoreFilter === 'all') return true;
     return p.metrics.semaphore.level === semaphoreFilter;
   });
+
+  // Filtrado combinado (estado + fase)
+  const filteredProjects = statusFilteredProjects.filter((p) => {
+    if (phaseFilter === 'all') return true;
+    return p.normalizedPhase === phaseFilter;
+  });
+
+  const activeFiltersCount =
+    (semaphoreFilter !== 'all' ? 1 : 0) + (phaseFilter !== 'all' ? 1 : 0);
+
+  const SEMAPHORE_OPTIONS = [
+    {
+      id: 'all',
+      label: 'Todos los estados',
+      shortLabel: 'Todos',
+      count: workflowProjects.length,
+      dotClass: 'bg-slate-400',
+    },
+    {
+      id: 'green',
+      label: 'En regla',
+      shortLabel: 'En regla',
+      count: totals.greenCount,
+      dotClass: 'bg-emerald-500',
+    },
+    {
+      id: 'yellow',
+      label: 'En alerta',
+      shortLabel: 'Alerta',
+      count: totals.yellowCount,
+      dotClass: 'bg-amber-500',
+    },
+    {
+      id: 'red',
+      label: 'Sobrecosto',
+      shortLabel: 'Sobrecosto',
+      count: totals.redCount,
+      dotClass: 'bg-rose-500',
+    },
+  ];
+
+  const activeSemaphoreOption =
+    SEMAPHORE_OPTIONS.find((opt) => opt.id === semaphoreFilter) || SEMAPHORE_OPTIONS[0];
+  const activePhaseMeta =
+    phaseFilter === 'all' ? null : getPhaseMeta(phaseFilter);
 
   const phaseOrder = PROJECT_PHASES.map((p) => p.id);
 
   return (
     <div className="space-y-6">
-      {/* Encabezado limpio */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
-            Panel de Proyectos
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-zinc-400">
-            Ciclo de vida estandarizado (Preproducción → Rodaje → Postproducción → Entrega / Lanzamiento)
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Filtro simple por estado */}
-          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 text-xs shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <button
-              type="button"
-              onClick={() => setSemaphoreFilter('all')}
-              className={`rounded-lg px-2.5 py-1 font-medium transition ${
-                semaphoreFilter === 'all'
-                  ? 'bg-slate-900 text-white dark:bg-zinc-800 dark:text-white'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
-              }`}
-            >
-              Todos ({enrichedProjects.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSemaphoreFilter('green')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition ${
-                semaphoreFilter === 'green'
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                  : 'text-slate-600 hover:text-emerald-700 dark:text-zinc-400 dark:hover:text-emerald-300'
-              }`}
-            >
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              En regla ({totals.greenCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSemaphoreFilter('yellow')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition ${
-                semaphoreFilter === 'yellow'
-                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
-                  : 'text-slate-600 hover:text-amber-700 dark:text-zinc-400 dark:hover:text-amber-300'
-              }`}
-            >
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
-              Alerta ({totals.yellowCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSemaphoreFilter('red')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition ${
-                semaphoreFilter === 'red'
-                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'
-                  : 'text-slate-600 hover:text-rose-700 dark:text-zinc-400 dark:hover:text-rose-300'
-              }`}
-            >
-              <span className="h-2 w-2 rounded-full bg-rose-500" />
-              Sobrecosto ({totals.redCount})
-            </button>
-          </div>
-        </div>
+      {/* Encabezado limpio (los filtros de proyecto se ubicaron junto a los grupos por fase) */}
+      <div>
+        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+          Panel de Proyectos
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-zinc-400">
+          Ciclo de vida estandarizado (Preproducción → Rodaje → Postproducción → Entrega / Lanzamiento)
+        </p>
       </div>
 
       {/* Mosaico de 4 Cajas de Resumen (2x2 en Mobile, 4 en Desktop) con números compactos MM / K e interacción por Tap */}
@@ -1019,54 +1036,119 @@ export default function DirectorDashboard({
         </div>
       )}
 
-      {/* Apartado de Acordeones por Fase y Tablero Kanban */}
-      <div ref={accordionsContainerRef} className="scroll-mt-4 space-y-4">
-        {/* Barra de Acceso Rápido y Control de Acordeones en Mobile (< lg) */}
-        <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:hidden dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200">
-              Grupos por Fase (Acordeón Mobile)
+      {/* Apartado de Filtros Minimalistas, Acordeones por Fase y Tablero Kanban */}
+      <div ref={accordionsContainerRef} className="scroll-mt-4 space-y-3">
+        {/* Barra Minimalista Unificada de Filtros de Proyectos (Fase + Estado) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs">
+            <span className="font-semibold text-slate-800 dark:text-zinc-100">
+              Proyectos ({filteredProjects.length})
             </span>
+
+            <span className="text-slate-300 dark:text-zinc-700">·</span>
+
+            {/* Chip de Fase activa o disparador rápido a la modal */}
+            {activePhaseMeta ? (
+              <button
+                type="button"
+                onClick={() => handleSelectPhaseFilter('all')}
+                className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
+                title="Quitar filtro de fase"
+              >
+                <span>{activePhaseMeta.shortLabel}</span>
+                <X className="h-3 w-3" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsFilterModalOpen(true)}
+                className="rounded-lg px-1.5 py-0.5 text-[11px] text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              >
+                Todas las fases
+              </button>
+            )}
+
+            {/* Chip de Estado activo o disparador rápido a la modal */}
+            {semaphoreFilter !== 'all' ? (
+              <button
+                type="button"
+                onClick={() => setSemaphoreFilter('all')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-800 transition hover:bg-slate-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                title="Quitar filtro de estado"
+              >
+                <span className={`h-2 w-2 rounded-full ${activeSemaphoreOption.dotClass}`} />
+                <span>{activeSemaphoreOption.shortLabel}</span>
+                <X className="h-3 w-3" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsFilterModalOpen(true)}
+                className="rounded-lg px-1.5 py-0.5 text-[11px] text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              >
+                Todos los estados
+              </button>
+            )}
+
+            {activeFiltersCount > 0 && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-slate-400 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300"
+                title="Restablecer todos los filtros"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span className="hidden sm:inline">Limpiar</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={handleToggleAllAccordions}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-medium text-slate-600 transition hover:bg-slate-100 lg:hidden dark:border-zinc-800 dark:bg-zinc-800/70 dark:text-zinc-300"
+              title={allExpanded ? 'Contraer fases' : 'Expandir fases'}
             >
               <ChevronsUpDown className="h-3.5 w-3.5" />
-              <span>{allExpanded ? 'Contraer todos' : 'Expandir todos'}</span>
+              <span className="hidden xs:inline">
+                {allExpanded ? 'Contraer' : 'Expandir'}
+              </span>
             </button>
-          </div>
 
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-            {PROJECT_PHASES.map((phase) => {
-              const count = filteredProjects.filter(
-                (p) => p.normalizedPhase === phase.id
-              ).length;
-              const isOpen = Boolean(openPhases[phase.id]);
-              return (
-                <button
-                  key={phase.id}
-                  type="button"
-                  onClick={() => handleFocusPhaseMobile(phase.id)}
-                  className={`flex items-center justify-between rounded-xl border px-2.5 py-2 text-left text-xs font-semibold transition ${
-                    isOpen
-                      ? phase.badgeColor
-                      : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400'
+            <button
+              type="button"
+              onClick={() => setIsFilterModalOpen(true)}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                activeFiltersCount > 0
+                  ? 'border-slate-900 bg-slate-900 text-white shadow-sm dark:border-emerald-500 dark:bg-emerald-500 dark:text-zinc-950'
+                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
+              }`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Filtros</span>
+              {activeFiltersCount > 0 && (
+                <span
+                  className={`rounded-full px-1.5 py-0.2 font-mono text-[10px] font-bold ${
+                    activeFiltersCount > 0
+                      ? 'bg-white/20 text-white dark:bg-zinc-950/20 dark:text-zinc-950'
+                      : ''
                   }`}
                 >
-                  <span className="truncate">{phase.shortLabel}</span>
-                  <span className="ml-1.5 rounded-full bg-white/90 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-700 shadow-sm dark:bg-zinc-800 dark:text-zinc-200">
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Tablero Kanban Estandarizado (Acordeón desplegable en Mobile / 4 Columnas en Desktop) */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        {PROJECT_PHASES.map((phase) => {
+        {/* Tablero Kanban Estandarizado (Acordeón desplegable en Mobile / Columnas en Desktop) */}
+        <div
+          className={`grid grid-cols-1 gap-4 ${
+            visiblePhases.length === 1 ? 'lg:grid-cols-1' : 'lg:grid-cols-4'
+          }`}
+        >
+        {visiblePhases.map((phase) => {
           const phaseProjects = filteredProjects.filter(
             (p) => p.normalizedPhase === phase.id
           );
@@ -1317,6 +1399,155 @@ export default function DirectorDashboard({
         })}
         </div>
       </div>
+
+      {/* Modal Minimalista de Filtros de Proyectos (Fase + Estado Presupuestario) */}
+      <NativeModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        title="Filtrar Proyectos"
+        subtitle="Selecciona la fase de producción y el estado presupuestario"
+        icon={SlidersHorizontal}
+        accentColor="emerald"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-5 text-xs">
+          {/* 1. Filtro por Fase */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                Fase del Proyecto
+              </span>
+              {phaseFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectPhaseFilter('all')}
+                  className="text-[11px] font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+                >
+                  Ver todas
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleSelectPhaseFilter('all')}
+                className={`col-span-2 flex items-center justify-between rounded-xl border px-3 py-2.5 text-left font-semibold transition ${
+                  phaseFilter === 'all'
+                    ? 'border-slate-900 bg-slate-900 text-white dark:border-emerald-500 dark:bg-emerald-500 dark:text-zinc-950'
+                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300'
+                }`}
+              >
+                <span>Todas las fases</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${
+                    phaseFilter === 'all'
+                      ? 'bg-white/20 text-white dark:bg-zinc-950/20 dark:text-zinc-950'
+                      : 'bg-white text-slate-700 dark:bg-zinc-800 dark:text-zinc-300'
+                  }`}
+                >
+                  {statusFilteredProjects.length}
+                </span>
+              </button>
+
+              {PROJECT_PHASES.map((phase) => {
+                const count = statusFilteredProjects.filter(
+                  (p) => p.normalizedPhase === phase.id
+                ).length;
+                const isSelected = phaseFilter === phase.id;
+                return (
+                  <button
+                    key={phase.id}
+                    type="button"
+                    onClick={() => handleSelectPhaseFilter(phase.id)}
+                    className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left font-semibold transition ${
+                      isSelected
+                        ? phase.badgeColor
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300'
+                    }`}
+                  >
+                    <span className="truncate">{phase.shortLabel}</span>
+                    <span className="ml-1.5 rounded-full bg-white/90 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-700 shadow-sm dark:bg-zinc-800 dark:text-zinc-200">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2. Filtro por Estado Presupuestario */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                Estado Presupuestario
+              </span>
+              {semaphoreFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setSemaphoreFilter('all')}
+                  className="text-[11px] font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+                >
+                  Ver todos
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {SEMAPHORE_OPTIONS.map((opt) => {
+                const isSelected = semaphoreFilter === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSemaphoreFilter(opt.id)}
+                    className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left font-semibold transition ${
+                      isSelected
+                        ? 'border-slate-900 bg-slate-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${opt.dotClass}`} />
+                      <span className="truncate">{opt.shortLabel}</span>
+                    </span>
+                    <span
+                      className={`ml-1.5 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                        isSelected
+                          ? 'bg-white/20 text-white dark:bg-zinc-950/20 dark:text-zinc-950'
+                          : 'bg-white text-slate-700 dark:bg-zinc-800 dark:text-zinc-200'
+                      }`}
+                    >
+                      {opt.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Pie de la Modal */}
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-zinc-800">
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              disabled={activeFiltersCount === 0}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Limpiar filtros</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsFilterModalOpen(false)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
+            >
+              <span>Ver proyectos ({filteredProjects.length})</span>
+            </button>
+          </div>
+        </div>
+      </NativeModal>
 
       {/* Modal Cotizar Proyecto */}
       <ScheduleEstimatorModal
