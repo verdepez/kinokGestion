@@ -10,6 +10,10 @@ import {
   RotateCcw,
   Share2,
   SlidersHorizontal,
+  FileDown,
+  Send,
+  Mail,
+  FileCheck2,
 } from 'lucide-react';
 import NativeModal from './NativeModal';
 import {
@@ -24,7 +28,12 @@ import {
   formatShortDateES,
   getPhaseMeta,
 } from '../utils/scheduleEstimator';
-import { formatCLP } from '../utils/finance';
+import { IVA_RATE, formatCLP } from '../utils/finance';
+import {
+  downloadQuotePdf,
+  buildWhatsAppQuoteUrl,
+  buildMailtoQuoteUrl,
+} from '../utils/pdfQuoteGenerator';
 
 const WEEKDAYS_ES = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
 const MONTHS_ES = [
@@ -68,6 +77,7 @@ export default function ScheduleEstimatorModal({
   isOpen,
   onClose,
   onCreateProject,
+  onConfirmQuote,
 }) {
   const defaultStart = '2026-10-06';
   const defaultType = 'video_corporativo';
@@ -76,7 +86,7 @@ export default function ScheduleEstimatorModal({
     PRODUCTION_TYPES[defaultType].defaultDays
   );
 
-  const [step, setStep] = useState(1); // 1: Cronograma & Gantt | 2: Presupuesto & Lanzamiento
+  const [step, setStep] = useState(1); // 1: Cronograma & Gantt | 2: Lanzamiento y Presupuesto
   const [name, setName] = useState('');
   const [client, setClient] = useState('');
   const [shootLocation, setShootLocation] = useState('Santiago, RM');
@@ -85,6 +95,15 @@ export default function ScheduleEstimatorModal({
   const [endDate, setEndDate] = useState(defaultEnd);
   const [customBoundaries, setCustomBoundaries] = useState(null);
   const [distributionPartner, setDistributionPartner] = useState('');
+  const [clientContact, setClientContact] = useState('');
+  const [quoteValidityDays, setQuoteValidityDays] = useState(15);
+  const [quoteNotes, setQuoteNotes] = useState(
+    '50% anticipo al aprobar presupuesto y 50% contra entrega de Master.'
+  );
+
+  // Estado de la cotización guardada por detrás como proyecto
+  const [generatedQuoteProject, setGeneratedQuoteProject] = useState(null);
+  const [validationError, setValidationError] = useState('');
 
   // Control del selector interactivo de rango en el calendario
   const [selectingEdge, setSelectingEdge] = useState('start'); // 'start' | 'end'
@@ -92,7 +111,7 @@ export default function ScheduleEstimatorModal({
   const [calendarYear, setCalendarYear] = useState(startDt.getUTCFullYear());
   const [calendarMonth, setCalendarMonth] = useState(startDt.getUTCMonth());
 
-  // Presupuesto inicial
+  // Presupuesto y margen comercial
   const [desiredMarginPct, setDesiredMarginPct] = useState(35);
   const [budget, setBudget] = useState({
     personal_tecnico: 2800000,
@@ -119,35 +138,61 @@ export default function ScheduleEstimatorModal({
     [calendarYear, calendarMonth]
   );
 
+  const [endDateFlash, setEndDateFlash] = useState(false);
+
+  const triggerEndDateHighlight = () => {
+    setEndDateFlash(true);
+    setTimeout(() => setEndDateFlash(false), 900);
+  };
+
+  const syncCalendarToIso = (isoDate) => {
+    const dt = parseISODate(isoDate);
+    setCalendarYear(dt.getUTCFullYear());
+    setCalendarMonth(dt.getUTCMonth());
+  };
+
+  // Al seleccionar el Tipo de Producción, recalcular enseguida la Fecha de Entrega / Lanzamiento
   const handleSelectProductionType = (newType) => {
     setProjectType(newType);
     setCustomBoundaries(null);
     const profile = PRODUCTION_TYPES[newType] || PRODUCTION_TYPES.video_corporativo;
     const suggestedEnd = addDaysISO(startDate, profile.defaultDays);
     setEndDate(suggestedEnd);
+    triggerEndDateHighlight();
+  };
+
+  // Al cambiar la Fecha de Inicio, actualizar dinámicamente la Fecha de Entrega según el Tipo de Producción activo
+  const handleStartDateChange = (newStartIso) => {
+    if (!newStartIso) return;
+    setCustomBoundaries(null);
+    setStartDate(newStartIso);
+    const profile = PRODUCTION_TYPES[projectType] || PRODUCTION_TYPES.video_corporativo;
+    const nextEnd = addDaysISO(newStartIso, profile.defaultDays);
+    setEndDate(nextEnd);
+    syncCalendarToIso(newStartIso);
+    triggerEndDateHighlight();
   };
 
   const handleApplySuggestedDuration = () => {
     const profile = PRODUCTION_TYPES[projectType] || PRODUCTION_TYPES.video_corporativo;
     setCustomBoundaries(null);
-    setEndDate(addDaysISO(startDate, profile.defaultDays));
+    const suggestedEnd = addDaysISO(startDate, profile.defaultDays);
+    setEndDate(suggestedEnd);
+    triggerEndDateHighlight();
   };
 
   const handleCalendarDayClick = (isoDate) => {
     setCustomBoundaries(null);
     if (selectingEdge === 'start') {
-      setStartDate(isoDate);
-      if (isoDate >= endDate) {
-        const profile = PRODUCTION_TYPES[projectType] || PRODUCTION_TYPES.video_corporativo;
-        setEndDate(addDaysISO(isoDate, profile.defaultDays));
-      }
+      handleStartDateChange(isoDate);
       setSelectingEdge('end');
     } else {
       if (isoDate <= startDate) {
-        setStartDate(isoDate);
+        handleStartDateChange(isoDate);
         setSelectingEdge('end');
       } else {
         setEndDate(isoDate);
+        triggerEndDateHighlight();
         setSelectingEdge('start');
       }
     }
@@ -205,51 +250,117 @@ export default function ScheduleEstimatorModal({
     (Number(budget.logistica_viaticos) || 0) +
     (Number(budget.imprevistos_contingencia) || 0);
 
+  const clampedMargin = Math.min(85, Math.max(5, Number(desiredMarginPct) || 35));
+  const precioVentaNeto = Math.round(totalBudget / (1 - clampedMargin / 100));
+  const margenComercialCLP = precioVentaNeto - totalBudget;
+  const ivaDebito = Math.round(precioVentaNeto * IVA_RATE);
+  const precioVentaBruto = precioVentaNeto + ivaDebito;
+
+  const buildPayload = () => ({
+    existingId: generatedQuoteProject?.id || null,
+    existingCode: generatedQuoteProject?.code || null,
+    name: name.trim(),
+    client: client.trim(),
+    shootLocation: shootLocation.trim() || 'Santiago, RM',
+    projectType,
+    startDate: schedule.startDate,
+    endDate: schedule.endDate,
+    phase: schedule.inferredPhase,
+    daysRemaining: schedule.daysRemaining,
+    shootDates: schedule.shootDatesLabel,
+    phaseSchedule: schedule,
+    distributionPartner: distributionPartner.trim(),
+    clientContact: clientContact.trim(),
+    quoteValidityDays: Number(quoteValidityDays) || 15,
+    quoteNotes: quoteNotes.trim(),
+    quoteStatus: 'PENDING_APPROVAL',
+    desiredMarginPct: clampedMargin,
+    ...budget,
+  });
+
+  // Guarda por detrás los datos como proyecto (en estado Cotización Pendiente) y retorna el proyecto creado
+  const persistQuoteBehindTheScenes = () => {
+    if (!name.trim() || !client.trim()) {
+      setValidationError(
+        'Por favor ingresa el Nombre del Proyecto y el Cliente / Marca para generar la cotización.'
+      );
+      setStep(1);
+      return null;
+    }
+    setValidationError('');
+    const payload = buildPayload();
+    const saved = onCreateProject(payload);
+    const projectObj = saved || {
+      id: generatedQuoteProject?.id || `PRJ-2026-COT`,
+      code: generatedQuoteProject?.code || `KNK-COT`,
+      ...payload,
+      budgetCategories: { ...budget },
+    };
+    setGeneratedQuoteProject(projectObj);
+    return projectObj;
+  };
+
+  // Botón "Generar Cotización" en el Paso 2: guarda por detrás como proyecto y prepara el documento
+  const handleGenerateQuote = () => {
+    const saved = persistQuoteBehindTheScenes();
+    if (!saved) return;
+    setStep(2);
+  };
+
+  // Botón "Generar PDF Cotización": guarda por detrás como proyecto y descarga el PDF listo para enviar por WhatsApp o Mail
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim() || !client.trim()) return;
+    const saved = persistQuoteBehindTheScenes();
+    if (!saved) return;
+    setStep(2);
+    downloadQuotePdf(saved);
+  };
 
-    onCreateProject({
-      name: name.trim(),
-      client: client.trim(),
-      shootLocation: shootLocation.trim() || 'Santiago, RM',
-      projectType,
-      startDate: schedule.startDate,
-      endDate: schedule.endDate,
-      phase: schedule.inferredPhase,
-      daysRemaining: schedule.daysRemaining,
-      shootDates: schedule.shootDatesLabel,
-      phaseSchedule: schedule,
-      distributionPartner: distributionPartner.trim(),
-      desiredMarginPct: Number(desiredMarginPct) || 35,
-      ...budget,
-    });
-
-    // Reset y cerrar
+  const handleResetAndClose = () => {
     setName('');
     setClient('');
     setDistributionPartner('');
+    setClientContact('');
+    setValidationError('');
+    setGeneratedQuoteProject(null);
     setCustomBoundaries(null);
     setStep(1);
     onClose();
+  };
+
+  const handleConfirmAndActivateNow = () => {
+    const saved = generatedQuoteProject || persistQuoteBehindTheScenes();
+    if (!saved) return;
+    if (typeof onConfirmQuote === 'function') {
+      onConfirmQuote(saved.id);
+    }
+    handleResetAndClose();
   };
 
   const inferredPhaseMeta = getPhaseMeta(schedule.inferredPhase);
   const prePhase = schedule.phases.find((p) => p.id === PHASE_IDS.PRE_PRODUCTION);
   const prodPhase = schedule.phases.find((p) => p.id === PHASE_IDS.PRODUCTION);
   const postPhase = schedule.phases.find((p) => p.id === PHASE_IDS.POST_PRODUCTION);
+  const activeProfile = PRODUCTION_TYPES[projectType] || PRODUCTION_TYPES.video_corporativo;
 
   return (
     <NativeModal
       isOpen={isOpen}
-      onClose={onClose}
-      title="Nuevo Proyecto y Estimador de Cronograma"
-      subtitle="Planifica fechas, previsualiza el diagrama Gantt por fases y valida tiempos de producción"
+      onClose={handleResetAndClose}
+      title="Cotizar Proyecto"
+      subtitle="Estimador dinámico de tiempos, fechas de entrega/lanzamiento y generación de cotización PDF"
       icon={Clapperboard}
       accentColor="emerald"
       maxWidth="max-w-4xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        {validationError && (
+          <div className="flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-800 dark:border-rose-500/40 dark:bg-rose-950/40 dark:text-rose-200">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
+            <span>{validationError}</span>
+          </div>
+        )}
+
         {/* Indicador de Pasos del Wizard */}
         <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-1.5 text-xs dark:border-zinc-800 dark:bg-zinc-950">
           <button
@@ -274,7 +385,7 @@ export default function ScheduleEstimatorModal({
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>2. Lanzamiento y Presupuesto Base</span>
+            <span>2. Lanzamiento y Presupuesto</span>
           </button>
         </div>
 
@@ -322,21 +433,22 @@ export default function ScheduleEstimatorModal({
               </div>
             </div>
 
-            {/* Selector de Tipo de Producción */}
+            {/* Selector de Tipo de Producción con Fecha de Entrega Dinámica */}
             <div>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                  Tipo de Producción (Motor de Estimación Proporcional)
+                  Tipo de Producción (Actualiza enseguida la Fecha de Entrega / Lanzamiento)
                 </label>
-                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                   <Sparkles className="h-3 w-3" />
-                  Distribuye automáticamente Pre, Rodaje y Post
+                  Entrega dinámica: {formatShortDateES(schedule.endDate)} ({schedule.totalDays} días)
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                 {PRODUCTION_TYPE_LIST.map((typeItem) => {
                   const isSelected = projectType === typeItem.id;
+                  const dynamicDeliveryIso = addDaysISO(startDate, typeItem.defaultDays);
                   return (
                     <button
                       key={typeItem.id}
@@ -344,23 +456,31 @@ export default function ScheduleEstimatorModal({
                       onClick={() => handleSelectProductionType(typeItem.id)}
                       className={`flex flex-col items-start rounded-xl border p-3 text-left transition ${
                         isSelected
-                          ? 'border-emerald-500 bg-emerald-50/70 shadow-sm dark:border-emerald-500 dark:bg-emerald-500/15'
+                          ? 'border-emerald-500 bg-emerald-50/70 shadow-sm ring-1 ring-emerald-500/30 dark:border-emerald-500 dark:bg-emerald-500/15'
                           : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800/70'
                       }`}
                     >
-                      <span
-                        className={`text-xs font-bold ${
-                          isSelected
-                            ? 'text-emerald-800 dark:text-emerald-300'
-                            : 'text-slate-800 dark:text-zinc-200'
-                        }`}
-                      >
-                        {typeItem.label}
-                      </span>
+                      <div className="flex w-full items-center justify-between gap-1">
+                        <span
+                          className={`text-xs font-bold ${
+                            isSelected
+                              ? 'text-emerald-800 dark:text-emerald-300'
+                              : 'text-slate-800 dark:text-zinc-200'
+                          }`}
+                        >
+                          {typeItem.label}
+                        </span>
+                        <span className="rounded bg-emerald-100/80 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                          +{typeItem.defaultDays}d
+                        </span>
+                      </div>
                       <span className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
                         {typeItem.subtitle}
                       </span>
-                      <span className="mt-2 rounded-md bg-white/90 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-600 dark:bg-zinc-900 dark:text-zinc-300">
+                      <span className="mt-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                        Entrega: {formatShortDateES(dynamicDeliveryIso)}
+                      </span>
+                      <span className="mt-1.5 rounded-md bg-white/90 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-600 dark:bg-zinc-900 dark:text-zinc-300">
                         {Math.round(typeItem.ratios.pre * 100)}% Pre ·{' '}
                         {Math.round(typeItem.ratios.prod * 100)}% Rod ·{' '}
                         {Math.round(typeItem.ratios.post * 100)}% Post
@@ -373,27 +493,30 @@ export default function ScheduleEstimatorModal({
 
             {/* Calendario Interactivo de Rango + Gráfico Gantt */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-              {/* Columna Izquierda: Date-Range Picker Interactivo */}
+              {/* Columna Izquierda: Date-Range Picker Interactivo Dinámico */}
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-950/80 lg:col-span-5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-                    Rango de Fechas
+                    Rango de Fechas Dinámico
                   </span>
                   <button
                     type="button"
                     onClick={handleApplySuggestedDuration}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                    title="Aplicar duración sugerida por estándar"
+                    title="Restaurar duración sugerida por tipo de producción"
                   >
                     <RotateCcw className="h-3 w-3" />
-                    <span>Sugerido ({PRODUCTION_TYPES[projectType].defaultDays}d)</span>
+                    <span>Sugerido (+{activeProfile.defaultDays}d)</span>
                   </button>
                 </div>
 
-                {/* Inputs de Inicio y Fin sincronizados con el calendario */}
+                {/* Inputs de Inicio y Fin sincronizados con el Tipo de Producción y Calendario */}
                 <div className="mt-2.5 grid grid-cols-2 gap-2">
                   <div
-                    onClick={() => setSelectingEdge('start')}
+                    onClick={() => {
+                      setSelectingEdge('start');
+                      syncCalendarToIso(startDate);
+                    }}
                     className={`cursor-pointer rounded-xl border p-2 transition ${
                       selectingEdge === 'start'
                         ? 'border-emerald-500 bg-white dark:bg-zinc-900'
@@ -406,28 +529,35 @@ export default function ScheduleEstimatorModal({
                     <input
                       type="date"
                       value={startDate}
-                      onChange={(e) => {
-                        setCustomBoundaries(null);
-                        setStartDate(e.target.value);
-                        if (e.target.value >= endDate) {
-                          setEndDate(addDaysISO(e.target.value, 14));
-                        }
-                      }}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
                       className="mt-0.5 w-full bg-transparent font-mono text-xs font-semibold text-slate-900 focus:outline-none dark:text-white"
                     />
+                    <span className="mt-0.5 block text-[10px] text-slate-500 dark:text-zinc-400">
+                      {formatShortDateES(startDate)}
+                    </span>
                   </div>
 
                   <div
-                    onClick={() => setSelectingEdge('end')}
-                    className={`cursor-pointer rounded-xl border p-2 transition ${
-                      selectingEdge === 'end'
+                    onClick={() => {
+                      setSelectingEdge('end');
+                      syncCalendarToIso(endDate);
+                    }}
+                    className={`cursor-pointer rounded-xl border p-2 transition-all duration-300 ${
+                      endDateFlash
+                        ? 'border-emerald-500 bg-emerald-50/90 ring-2 ring-emerald-500/40 dark:bg-emerald-500/20'
+                        : selectingEdge === 'end'
                         ? 'border-emerald-500 bg-white dark:bg-zinc-900'
                         : 'border-slate-200 bg-white/70 dark:border-zinc-800 dark:bg-zinc-900/50'
                     }`}
                   >
-                    <label className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-zinc-400">
-                      Entrega / Lanzamiento
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-400">
+                        Entrega / Lanzamiento
+                      </label>
+                      <span className="rounded bg-emerald-100 px-1 py-0.2 font-mono text-[9px] font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                        {schedule.totalDays}d
+                      </span>
+                    </div>
                     <input
                       type="date"
                       value={endDate}
@@ -435,13 +565,17 @@ export default function ScheduleEstimatorModal({
                       onChange={(e) => {
                         setCustomBoundaries(null);
                         setEndDate(e.target.value);
+                        syncCalendarToIso(e.target.value);
                       }}
-                      className="mt-0.5 w-full bg-transparent font-mono text-xs font-semibold text-slate-900 focus:outline-none dark:text-white"
+                      className="mt-0.5 w-full bg-transparent font-mono text-xs font-bold text-emerald-700 focus:outline-none dark:text-emerald-300"
                     />
+                    <span className="mt-0.5 block text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                      {formatShortDateES(endDate)}
+                    </span>
                   </div>
                 </div>
 
-                {/* Navegación del Mes del Calendario */}
+                {/* Navegación del Mes del Calendario + Atajos Inicio/Entrega */}
                 <div className="mt-3 flex items-center justify-between px-1">
                   <button
                     type="button"
@@ -451,9 +585,19 @@ export default function ScheduleEstimatorModal({
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
-                  <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
-                    {MONTHS_ES[calendarMonth]} {calendarYear}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                      {MONTHS_ES[calendarMonth]} {calendarYear}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => syncCalendarToIso(endDate)}
+                      className="rounded-md bg-emerald-100/80 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 hover:bg-emerald-200/70 dark:bg-emerald-500/20 dark:text-emerald-300"
+                      title="Ver mes de Entrega / Lanzamiento en el calendario"
+                    >
+                      Ver entrega
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={handleNextMonth}
@@ -739,59 +883,117 @@ export default function ScheduleEstimatorModal({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Sección Entrega / Lanzamiento y Partner de Distribución */}
+            {/* Sección Entrega / Lanzamiento y Datos Solicitados de Cotización */}
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-950/20">
-              <div className="flex items-center gap-2">
-                <Share2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                  Hito de Entrega / Lanzamiento (`DELIVERY_LAUNCH`)
-                </h3>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Share2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                    Datos de Lanzamiento y Cotización Comercial
+                  </h3>
+                </div>
+                <span className="rounded-lg bg-emerald-100 px-2.5 py-0.5 font-mono text-[11px] font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                  Entrega: {formatShortDateES(schedule.endDate)}
+                </span>
               </div>
               <p className="mt-1 text-xs text-slate-600 dark:text-zinc-400">
-                Asocia opcionalmente el Partner de Distribución, canal de exhibición o Agencia de Lanzamiento para la entrega del{' '}
-                <strong>{formatShortDateES(schedule.endDate)}</strong>.
+                Completa los datos de entrega/lanzamiento y contacto del cliente para incluirlos en el documento PDF de cotización.
               </p>
+
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                    Partner de Distribución / Agencia
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Agencia Havas Media / Digital"
+                    value={distributionPartner}
+                    onChange={(e) => setDistributionPartner(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                    Correo o WhatsApp Cliente
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: contacto@cliente.cl / +569..."
+                    value={clientContact}
+                    onChange={(e) => setClientContact(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                    Validez Cotización (días)
+                  </label>
+                  <input
+                    type="number"
+                    min="3"
+                    max="90"
+                    value={quoteValidityDays}
+                    onChange={(e) => setQuoteValidityDays(Number(e.target.value))}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  />
+                </div>
+              </div>
+
               <div className="mt-3">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                  Partner de Distribución / Agencia de Lanzamiento (Opcional)
+                  Condiciones Comerciales / Observaciones
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej: Agencia Havas Media / Circuito Festivales / Distribución Digital"
-                  value={distributionPartner}
-                  onChange={(e) => setDistributionPartner(e.target.value)}
+                  placeholder="Ej: 50% anticipo al confirmar presupuesto y 50% contra entrega de Master."
+                  value={quoteNotes}
+                  onChange={(e) => setQuoteNotes(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                 />
               </div>
             </div>
 
-            {/* Presupuesto Base por Categoría */}
+            {/* Presupuesto por Partida y Margen Comercial */}
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/70">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-                    Presupuesto Directo por Partida ($ CLP)
+                    Presupuesto Directo y Margen Comercial ($ CLP)
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                    Costo directo total estimado:{' '}
-                    <strong className="font-mono text-slate-900 dark:text-white">
-                      {formatCLP(totalBudget)}
-                    </strong>
+                    Define los costos por partida y el margen deseado para calcular el precio neto y total con IVA.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
                     Margen Comercial (%):
                   </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="80"
-                    value={desiredMarginPct}
-                    onChange={(e) => setDesiredMarginPct(Number(e.target.value))}
-                    className="w-20 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-right font-mono text-xs font-bold text-emerald-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-emerald-400"
-                  />
+                  <div className="flex items-center gap-1">
+                    {[25, 30, 35, 40].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setDesiredMarginPct(preset)}
+                        className={`rounded-lg border px-2 py-1 font-mono text-[11px] font-semibold transition ${
+                          desiredMarginPct === preset
+                            ? 'border-emerald-500 bg-emerald-600 text-white dark:bg-emerald-500 dark:text-zinc-950'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
+                        }`}
+                      >
+                        {preset}%
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min="5"
+                      max="80"
+                      value={desiredMarginPct}
+                      onChange={(e) => setDesiredMarginPct(Number(e.target.value))}
+                      className="w-16 rounded-xl border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-bold text-emerald-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-emerald-400"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -869,26 +1071,144 @@ export default function ScheduleEstimatorModal({
                   />
                 </div>
               </div>
+
+              {/* Resumen Financiero + Botón Generar Cotización */}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div>
+                    <span className="block text-[10px] font-medium uppercase text-slate-400">
+                      Costo Directo
+                    </span>
+                    <span className="font-mono text-xs font-bold text-slate-800 dark:text-zinc-200">
+                      {formatCLP(totalBudget)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-medium uppercase text-slate-400">
+                      Margen ({clampedMargin}%)
+                    </span>
+                    <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      +{formatCLP(margenComercialCLP)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-medium uppercase text-slate-400">
+                      Valor Neto + IVA 19%
+                    </span>
+                    <span className="font-mono text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                      {formatCLP(precioVentaNeto)} + {formatCLP(ivaDebito)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400">
+                      Total Cotización (IVA incl.)
+                    </span>
+                    <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                      {formatCLP(precioVentaBruto)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateQuote}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-200 dark:hover:bg-emerald-500/30"
+                >
+                  <FileCheck2 className="h-4 w-4" />
+                  <span>
+                    {generatedQuoteProject ? 'Actualizar Cotización' : 'Generar Cotización'}
+                  </span>
+                </button>
+              </div>
             </div>
+
+            {/* Tarjeta de Cotización Generada y Lista para Enviar por WhatsApp o Mail */}
+            {generatedQuoteProject && (
+              <div className="rounded-2xl border-2 border-emerald-500 bg-emerald-50/80 p-4 shadow-sm dark:border-emerald-500/70 dark:bg-emerald-950/30">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                          Cotización {generatedQuoteProject.code} guardada como proyecto
+                        </h4>
+                        <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-200">
+                          Pendiente de Confirmación
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-600 dark:text-zinc-300">
+                        El documento está listo para enviar por <strong>WhatsApp</strong> o{' '}
+                        <strong>Correo</strong>. Cuando el cliente apruebe el presupuesto, confírmalo en la plataforma para activarlo en los flujos de trabajo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-emerald-200/80 pt-3 dark:border-emerald-800/60">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => downloadQuotePdf(generatedQuoteProject)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+                    >
+                      <FileDown className="h-3.5 w-3.5" />
+                      <span>Descargar PDF</span>
+                    </button>
+
+                    <a
+                      href={buildWhatsAppQuoteUrl(generatedQuoteProject)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      <span>Enviar por WhatsApp</span>
+                    </a>
+
+                    <a
+                      href={buildMailtoQuoteUrl(generatedQuoteProject)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      <span>Enviar por Mail</span>
+                    </a>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmAndActivateNow}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-600 bg-white px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-400 dark:bg-zinc-900 dark:text-emerald-300"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>Confirmar Presupuesto y Activar Flujo Ahora</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* Botonera Inferior del Wizard */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-zinc-800">
           <div className="text-xs text-slate-500 dark:text-zinc-400">
-            Fase asignada automáticamente:{' '}
+            Fase inicial al confirmar:{' '}
             <strong className="text-slate-800 dark:text-zinc-200">
               {inferredPhaseMeta.label}
+            </strong>{' '}
+            · Total c/IVA:{' '}
+            <strong className="font-mono text-emerald-700 dark:text-emerald-400">
+              {formatCLP(precioVentaBruto)}
             </strong>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleResetAndClose}
               className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              Cancelar
+              {generatedQuoteProject ? 'Cerrar (Dejar en Cotizaciones)' : 'Cancelar'}
             </button>
 
             {step === 1 ? (
@@ -911,9 +1231,10 @@ export default function ScheduleEstimatorModal({
 
             <button
               type="submit"
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
             >
-              Confirmar y Crear Proyecto
+              <FileDown className="h-4 w-4" />
+              <span>Generar PDF Cotización</span>
             </button>
           </div>
         </div>

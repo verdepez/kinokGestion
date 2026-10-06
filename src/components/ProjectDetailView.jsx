@@ -16,6 +16,9 @@ import {
   Clock,
   Info,
   Share2,
+  FileDown,
+  Send,
+  Mail,
 } from 'lucide-react';
 import {
   BUDGET_CATEGORIES,
@@ -33,6 +36,11 @@ import {
   calculatePhaseSchedule,
   formatShortDateES,
 } from '../utils/scheduleEstimator';
+import {
+  downloadQuotePdf,
+  buildWhatsAppQuoteUrl,
+  buildMailtoQuoteUrl,
+} from '../utils/pdfQuoteGenerator';
 
 export default function ProjectDetailView({
   project,
@@ -47,6 +55,7 @@ export default function ProjectDetailView({
   onDeleteExpense,
   onToggleRevisionScope,
   onAddRevision,
+  onConfirmQuote,
 }) {
   const [activeTab, setActiveTab] = useState('presupuesto'); // 'presupuesto' | 'gastos' | 'revisiones'
 
@@ -134,6 +143,60 @@ export default function ProjectDetailView({
 
   return (
     <div className="space-y-6">
+      {/* Banner si el proyecto está en estado Cotización Pendiente de Confirmación */}
+      {project.quoteStatus === 'PENDING_APPROVAL' && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-amber-400 bg-amber-50 p-4 text-xs shadow-sm dark:border-amber-500/50 dark:bg-amber-950/30">
+          <div className="flex items-start gap-2.5">
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="font-bold text-slate-900 dark:text-white">
+                Cotización {project.code} Pendiente de Confirmación por el Cliente
+              </p>
+              <p className="mt-0.5 text-slate-600 dark:text-zinc-300">
+                Descarga el PDF o envíalo por WhatsApp/Mail. Cuando el cliente apruebe el presupuesto, confírmalo para activarlo en el tablero de flujos de trabajo.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => downloadQuotePdf(project)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-zinc-950"
+            >
+              <FileDown className="h-3.5 w-3.5" />
+              <span>PDF Cotización</span>
+            </button>
+            <a
+              href={buildWhatsAppQuoteUrl(project)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-white px-3 py-1.5 font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/40 dark:bg-zinc-900 dark:text-emerald-300"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>WhatsApp</span>
+            </a>
+            <a
+              href={buildMailtoQuoteUrl(project)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              <span>Mail</span>
+            </a>
+            {typeof onConfirmQuote === 'function' && (
+              <button
+                type="button"
+                onClick={() => onConfirmQuote(project.id)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 font-bold text-white shadow-sm hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Confirmar Presupuesto y Activar Flujo</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Cabecera Unificada del Proyecto */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         {/* Fila superior: Volver + Selector de Proyecto + Fase + Estado */}
@@ -164,6 +227,16 @@ export default function ProjectDetailView({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => downloadQuotePdf(project)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              title="Descargar documento PDF de cotización"
+            >
+              <FileDown className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>PDF Cotización</span>
+            </button>
+
             <span className="rounded-xl border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
               {prodTypeMeta.label}
             </span>

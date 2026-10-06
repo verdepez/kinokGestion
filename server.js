@@ -51,6 +51,10 @@ function rowToProject(row) {
     code: row.code,
     name: row.name,
     client: row.client,
+    clientContact: row.client_contact || '',
+    quoteValidityDays: Number(row.quote_validity_days) || 15,
+    quoteNotes: row.quote_notes || '',
+    quoteStatus: row.quote_status || 'APPROVED',
     projectType,
     startDate,
     endDate,
@@ -74,15 +78,20 @@ async function upsertProject(client, p, sortOrder = 0) {
   const normalizedPhase = normalizeProjectPhase(p.phase);
   await client.query(
     `INSERT INTO projects (
-      id, code, name, client, project_type, start_date, end_date,
+      id, code, name, client, client_contact, quote_validity_days, quote_notes, quote_status,
+      project_type, start_date, end_date,
       phase, days_remaining, shoot_location, shoot_dates,
       distribution_partner, phase_schedule, desired_margin_pct, extra_hour_rate_clp,
       assigned_freelancers, budget_categories, expenses, revisions, freelance_tasks, sort_order
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
     ON CONFLICT (id) DO UPDATE SET
       code = EXCLUDED.code,
       name = EXCLUDED.name,
       client = EXCLUDED.client,
+      client_contact = EXCLUDED.client_contact,
+      quote_validity_days = EXCLUDED.quote_validity_days,
+      quote_notes = EXCLUDED.quote_notes,
+      quote_status = EXCLUDED.quote_status,
       project_type = EXCLUDED.project_type,
       start_date = EXCLUDED.start_date,
       end_date = EXCLUDED.end_date,
@@ -106,6 +115,10 @@ async function upsertProject(client, p, sortOrder = 0) {
       p.code,
       p.name,
       p.client,
+      p.clientContact || '',
+      Number(p.quoteValidityDays) || 15,
+      p.quoteNotes || '',
+      p.quoteStatus || 'APPROVED',
       p.projectType || 'video_corporativo',
       p.startDate || '2026-09-15',
       p.endDate || '2026-10-25',
@@ -157,6 +170,10 @@ async function initDatabase() {
           code TEXT NOT NULL,
           name TEXT NOT NULL,
           client TEXT NOT NULL,
+          client_contact TEXT DEFAULT '',
+          quote_validity_days INT DEFAULT 15,
+          quote_notes TEXT DEFAULT '',
+          quote_status TEXT DEFAULT 'APPROVED',
           project_type TEXT DEFAULT 'video_corporativo',
           start_date TEXT DEFAULT '2026-09-15',
           end_date TEXT DEFAULT '2026-10-25',
@@ -180,6 +197,10 @@ async function initDatabase() {
 
       // Migraciones no destructivas para bases PostgreSQL existentes en Railway
       await client.query(`
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_contact TEXT DEFAULT '';
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS quote_validity_days INT DEFAULT 15;
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS quote_notes TEXT DEFAULT '';
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS quote_status TEXT DEFAULT 'APPROVED';
         ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_type TEXT DEFAULT 'video_corporativo';
         ALTER TABLE projects ADD COLUMN IF NOT EXISTS start_date TEXT DEFAULT '2026-09-15';
         ALTER TABLE projects ADD COLUMN IF NOT EXISTS end_date TEXT DEFAULT '2026-10-25';

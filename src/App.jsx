@@ -187,10 +187,19 @@ export default function App() {
     setActiveView('project-detail');
   };
 
+  // Estado de última transición de fase para confirmar traspaso entre grupos
+  const [lastPhaseTransition, setLastPhaseTransition] = useState(null);
+
   // Mover proyecto de fase
   const handleMoveProjectPhase = (projectId, newPhase) => {
     const normalized = normalizeProjectPhase(newPhase);
     const phaseMeta = getPhaseMeta(normalized);
+    const targetProject = projects.find((p) => p.id === projectId);
+    const prevNormalized = targetProject
+      ? normalizeProjectPhase(targetProject.phase)
+      : PHASE_IDS.PRE_PRODUCTION;
+    const prevMeta = getPhaseMeta(prevNormalized);
+
     updateProjectsAndSync((prev) =>
       prev.map((p) =>
         p.id === projectId
@@ -205,9 +214,22 @@ export default function App() {
           : p
       )
     );
+
+    if (targetProject && prevNormalized !== normalized) {
+      setLastPhaseTransition({
+        projectId: targetProject.id,
+        projectName: targetProject.name,
+        fromPhaseId: prevNormalized,
+        fromLabel: prevMeta.label,
+        toPhaseId: normalized,
+        toLabel: phaseMeta.label,
+        updatedAt: Date.now(),
+      });
+    }
+
     appendAuditLog(
       'Nicolás Iriarte',
-      `Proyecto ${projectId} movido a "${phaseMeta.label}"`,
+      `Proyecto ${projectId} movido de "${prevMeta.label}" a "${phaseMeta.label}"`,
       '200 OK',
       'info'
     );
@@ -227,17 +249,23 @@ export default function App() {
     );
   };
 
-  // Crear nuevo proyecto desde el Estimador de Cronograma
+  // Guardar cotización por detrás como proyecto (en estado PENDING_APPROVAL hasta su confirmación)
   const handleCreateProject = (formData) => {
+    const isUpdatingExisting = Boolean(formData.existingId);
     const nextIdx = projects.length + 1;
-    const newId = `PRJ-2026-0${nextIdx}`;
-    const newCode = `KNK-260${nextIdx}`;
+    const newId = formData.existingId || `PRJ-2026-0${nextIdx}`;
+    const newCode = formData.existingCode || `KNK-260${nextIdx}`;
     const normalizedPhase = normalizeProjectPhase(formData.phase);
+
     const newProject = {
       id: newId,
       code: newCode,
       name: formData.name,
       client: formData.client,
+      clientContact: formData.clientContact || '',
+      quoteValidityDays: Number(formData.quoteValidityDays) || 15,
+      quoteNotes: formData.quoteNotes || '',
+      quoteStatus: formData.quoteStatus || 'PENDING_APPROVAL',
       projectType: formData.projectType || 'video_corporativo',
       startDate: formData.startDate || '2026-10-06',
       endDate: formData.endDate || '2026-11-10',
@@ -271,12 +299,61 @@ export default function App() {
       ],
     };
 
-    updateProjectsAndSync((prev) => [newProject, ...prev]);
+    updateProjectsAndSync((prev) => {
+      if (isUpdatingExisting && prev.some((p) => p.id === newId)) {
+        return prev.map((p) => (p.id === newId ? { ...p, ...newProject } : p));
+      }
+      return [newProject, ...prev];
+    });
+
     setSelectedProjectId(newId);
     appendAuditLog(
       'Nicolás Iriarte',
-      `Nuevo proyecto creado con estimador: ${formData.name} (${getPhaseMeta(normalizedPhase).label})`,
+      `Cotización ${newCode} generada y guardada como proyecto: ${formData.name}`,
       '201 CREATED',
+      'success'
+    );
+    return newProject;
+  };
+
+  // Confirmar presupuesto en la plataforma y activar el proyecto en los flujos de trabajo
+  const handleConfirmProjectQuote = (projectId) => {
+    const targetProject = projects.find((p) => p.id === projectId);
+    const activePhase = targetProject
+      ? normalizeProjectPhase(targetProject.phase)
+      : PHASE_IDS.PRE_PRODUCTION;
+    const phaseMeta = getPhaseMeta(activePhase);
+
+    updateProjectsAndSync((prev) =>
+      prev.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              quoteStatus: 'APPROVED',
+              phase: activePhase,
+            }
+          : p
+      )
+    );
+
+    if (targetProject) {
+      setLastPhaseTransition({
+        projectId: targetProject.id,
+        projectName: targetProject.name,
+        fromPhaseId: 'QUOTE',
+        fromLabel: 'Cotización Aprobada',
+        toPhaseId: activePhase,
+        toLabel: phaseMeta.label,
+        updatedAt: Date.now(),
+      });
+    }
+
+    appendAuditLog(
+      'Nicolás Iriarte',
+      `Presupuesto confirmado para "${targetProject?.name || projectId}": activado en flujo "${
+        phaseMeta.label
+      }"`,
+      '200 OK',
       'success'
     );
   };
@@ -603,6 +680,7 @@ export default function App() {
             onDeleteExpense={handleDeleteExpense}
             onToggleRevisionScope={handleToggleRevisionScope}
             onAddRevision={handleAddRevision}
+            onConfirmQuote={handleConfirmProjectQuote}
           />
         ) : (
           <DirectorDashboard
@@ -610,6 +688,9 @@ export default function App() {
             onSelectProject={handleSelectProject}
             onMoveProjectPhase={handleMoveProjectPhase}
             onCreateProject={handleCreateProject}
+            onConfirmQuote={handleConfirmProjectQuote}
+            lastPhaseTransition={lastPhaseTransition}
+            onClearPhaseTransition={() => setLastPhaseTransition(null)}
           />
         )}
       </main>
