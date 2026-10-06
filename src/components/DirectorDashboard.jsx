@@ -9,15 +9,19 @@ import {
   Plus,
   ChevronRight,
   ChevronLeft,
-  CheckCircle2,
+  Share2,
+  Calendar,
 } from 'lucide-react';
 import {
   PROJECT_PHASES,
+  PHASE_IDS,
+  PRODUCTION_TYPES,
+  normalizeProjectPhase,
   computeProjectMetrics,
   formatCLP,
   formatPct,
 } from '../utils/finance';
-import NativeModal from './NativeModal';
+import ScheduleEstimatorModal from './ScheduleEstimatorModal';
 
 export default function DirectorDashboard({
   projects,
@@ -27,25 +31,16 @@ export default function DirectorDashboard({
 }) {
   const [semaphoreFilter, setSemaphoreFilter] = useState('all');
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
-  const [newProjectForm, setNewProjectForm] = useState({
-    name: '',
-    client: '',
-    phase: 'Preproducción',
-    daysRemaining: 18,
-    shootLocation: 'Santiago, RM',
-    desiredMarginPct: 35,
-    personal_tecnico: 2800000,
-    equipamiento: 1500000,
-    logistica_viaticos: 650000,
-    imprevistos_contingencia: 350000,
-  });
 
   const enrichedProjects = projects.map((project) => ({
     ...project,
+    normalizedPhase: normalizeProjectPhase(project.phase),
     metrics: computeProjectMetrics(project),
   }));
 
-  const activeProjects = enrichedProjects.filter((p) => p.phase !== 'Cerrado');
+  const activeProjects = enrichedProjects.filter(
+    (p) => p.normalizedPhase !== PHASE_IDS.DELIVERY_LAUNCH
+  );
   const boutiqueCapacity = 5;
 
   const totals = enrichedProjects.reduce(
@@ -83,25 +78,6 @@ export default function DirectorDashboard({
     return p.metrics.semaphore.level === semaphoreFilter;
   });
 
-  const handleCreateSubmit = (e) => {
-    e.preventDefault();
-    if (!newProjectForm.name.trim() || !newProjectForm.client.trim()) return;
-    onCreateProject(newProjectForm);
-    setIsNewProjectModalOpen(false);
-    setNewProjectForm({
-      name: '',
-      client: '',
-      phase: 'Preproducción',
-      daysRemaining: 18,
-      shootLocation: 'Santiago, RM',
-      desiredMarginPct: 35,
-      personal_tecnico: 2800000,
-      equipamiento: 1500000,
-      logistica_viaticos: 650000,
-      imprevistos_contingencia: 350000,
-    });
-  };
-
   const phaseOrder = PROJECT_PHASES.map((p) => p.id);
 
   return (
@@ -113,7 +89,7 @@ export default function DirectorDashboard({
             Panel de Proyectos
           </h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400">
-            Resumen general del estudio y estado de presupuestos en tiempo real
+            Ciclo de vida estandarizado (Preproducción → Rodaje → Postproducción → Entrega / Lanzamiento)
           </p>
         </div>
 
@@ -175,23 +151,26 @@ export default function DirectorDashboard({
             className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
           >
             <Plus className="h-4 w-4" />
-            <span>Nuevo Proyecto</span>
+            <span>Nuevo Proyecto (Estimador)</span>
           </button>
         </div>
       </div>
 
       {/* 4 Tarjetas KPI Simplificadas */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {/* KPI 1: Proyectos Activos */}
+        {/* KPI 1: Proyectos en Rodaje / Post / Pre */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-              Proyectos Activos
+              En Ejecución Activa
             </span>
             <Clapperboard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <p className="mt-2 font-mono text-2xl font-bold text-slate-900 dark:text-white">
-            {activeProjects.length} <span className="text-sm font-normal text-slate-400">de {boutiqueCapacity}</span>
+            {activeProjects.length}{' '}
+            <span className="text-sm font-normal text-slate-400">
+              de {boutiqueCapacity}
+            </span>
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
             Capacidad operativa ({Math.round((activeProjects.length / boutiqueCapacity) * 100)}%)
@@ -249,10 +228,12 @@ export default function DirectorDashboard({
         </div>
       </div>
 
-      {/* Tablero Kanban Simplificado */}
+      {/* Tablero Kanban Estandarizado (4 Fases) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         {PROJECT_PHASES.map((phase) => {
-          const phaseProjects = filteredProjects.filter((p) => p.phase === phase.id);
+          const phaseProjects = filteredProjects.filter(
+            (p) => p.normalizedPhase === phase.id
+          );
           const currentPhaseIdx = phaseOrder.indexOf(phase.id);
 
           return (
@@ -283,6 +264,9 @@ export default function DirectorDashboard({
                     const { metrics } = project;
                     const sem = metrics.semaphore;
                     const barWidth = Math.min(100, Math.max(0, sem.ratio));
+                    const prodTypeMeta =
+                      PRODUCTION_TYPES[project.projectType] ||
+                      PRODUCTION_TYPES.video_corporativo;
 
                     return (
                       <div
@@ -313,6 +297,29 @@ export default function DirectorDashboard({
                               {project.name}
                             </h3>
                           </button>
+
+                          {/* Tipo de Producción + Rango de Fechas */}
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
+                            <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-medium text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                              {prodTypeMeta.label}
+                            </span>
+                            {project.shootDates && (
+                              <span className="inline-flex items-center gap-1">
+                                <Calendar className="h-3 w-3 text-slate-400" />
+                                {project.shootDates}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Partner de Distribución en fase Entrega / Lanzamiento */}
+                          {project.distributionPartner && (
+                            <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-emerald-200/80 bg-emerald-50/60 px-2 py-1 text-[11px] text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                              <Share2 className="h-3 w-3 shrink-0" />
+                              <span className="truncate font-medium">
+                                {project.distributionPartner}
+                              </span>
+                            </div>
+                          )}
 
                           {/* Barra de Presupuesto Limpia */}
                           <div className="mt-3">
@@ -371,9 +378,9 @@ export default function DirectorDashboard({
                               <ChevronRight className="h-3.5 w-3.5" />
                             </button>
                             <span className="ml-1 text-[11px] text-slate-400 dark:text-zinc-500">
-                              {project.phase === 'Cerrado' ? (
-                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                  <CheckCircle2 className="h-3 w-3" /> Cerrado
+                              {project.normalizedPhase === PHASE_IDS.DELIVERY_LAUNCH ? (
+                                <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                                  <Share2 className="h-3 w-3" /> En Lanzamiento
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1">
@@ -402,205 +409,12 @@ export default function DirectorDashboard({
         })}
       </div>
 
-      {/* Modal para Crear Nuevo Proyecto */}
-      <NativeModal
+      {/* Wizard Estimador de Cronograma y Creación de Proyecto */}
+      <ScheduleEstimatorModal
         isOpen={isNewProjectModalOpen}
         onClose={() => setIsNewProjectModalOpen(false)}
-        title="Nuevo Proyecto"
-        subtitle="Ingresa los datos básicos y el presupuesto estimado"
-        icon={Clapperboard}
-        accentColor="emerald"
-        maxWidth="max-w-lg"
-      >
-        <form onSubmit={handleCreateSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300">
-                Nombre del Proyecto *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Ej: Campaña Energías Limpias"
-                value={newProjectForm.name}
-                onChange={(e) =>
-                  setNewProjectForm({ ...newProjectForm, name: e.target.value })
-                }
-                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300">
-                Cliente *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Ej: Colbún S.A."
-                value={newProjectForm.client}
-                onChange={(e) =>
-                  setNewProjectForm({ ...newProjectForm, client: e.target.value })
-                }
-                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300">
-                Fase Inicial
-              </label>
-              <select
-                value={newProjectForm.phase}
-                onChange={(e) =>
-                  setNewProjectForm({ ...newProjectForm, phase: e.target.value })
-                }
-                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-              >
-                {PROJECT_PHASES.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300">
-                Días Restantes
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="120"
-                value={newProjectForm.daysRemaining}
-                onChange={(e) =>
-                  setNewProjectForm({
-                    ...newProjectForm,
-                    daysRemaining: Number(e.target.value),
-                  })
-                }
-                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300">
-                Margen (%)
-              </label>
-              <input
-                type="number"
-                min="5"
-                max="80"
-                value={newProjectForm.desiredMarginPct}
-                onChange={(e) =>
-                  setNewProjectForm({
-                    ...newProjectForm,
-                    desiredMarginPct: Number(e.target.value),
-                  })
-                }
-                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-emerald-600 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-emerald-400"
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-zinc-800 dark:bg-zinc-950/70">
-            <p className="mb-2.5 text-xs font-semibold text-slate-600 dark:text-zinc-400">
-              Presupuesto por Categoría ($ CLP)
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs text-slate-500 dark:text-zinc-400">
-                  Personal Técnico
-                </label>
-                <input
-                  type="number"
-                  step="50000"
-                  min="0"
-                  value={newProjectForm.personal_tecnico}
-                  onChange={(e) =>
-                    setNewProjectForm({
-                      ...newProjectForm,
-                      personal_tecnico: Number(e.target.value),
-                    })
-                  }
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-mono text-sm text-slate-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 dark:text-zinc-400">
-                  Equipamiento
-                </label>
-                <input
-                  type="number"
-                  step="50000"
-                  min="0"
-                  value={newProjectForm.equipamiento}
-                  onChange={(e) =>
-                    setNewProjectForm({
-                      ...newProjectForm,
-                      equipamiento: Number(e.target.value),
-                    })
-                  }
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-mono text-sm text-slate-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 dark:text-zinc-400">
-                  Logística / Viáticos
-                </label>
-                <input
-                  type="number"
-                  step="50000"
-                  min="0"
-                  value={newProjectForm.logistica_viaticos}
-                  onChange={(e) =>
-                    setNewProjectForm({
-                      ...newProjectForm,
-                      logistica_viaticos: Number(e.target.value),
-                    })
-                  }
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-mono text-sm text-slate-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 dark:text-zinc-400">
-                  Imprevistos
-                </label>
-                <input
-                  type="number"
-                  step="50000"
-                  min="0"
-                  value={newProjectForm.imprevistos_contingencia}
-                  onChange={(e) =>
-                    setNewProjectForm({
-                      ...newProjectForm,
-                      imprevistos_contingencia: Number(e.target.value),
-                    })
-                  }
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-mono text-sm text-slate-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setIsNewProjectModalOpen(false)}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
-            >
-              Crear Proyecto
-            </button>
-          </div>
-        </form>
-      </NativeModal>
+        onCreateProject={onCreateProject}
+      />
     </div>
   );
 }
-

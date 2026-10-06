@@ -29,32 +29,14 @@ export const BUDGET_CATEGORIES = [
   },
 ];
 
-export const PROJECT_PHASES = [
-  {
-    id: 'Preproducción',
-    label: 'Preproducción',
-    badgeColor:
-      'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300',
-  },
-  {
-    id: 'Producción',
-    label: 'Producción',
-    badgeColor:
-      'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-300',
-  },
-  {
-    id: 'Postproducción',
-    label: 'Postproducción',
-    badgeColor:
-      'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300',
-  },
-  {
-    id: 'Cerrado',
-    label: 'Cerrado',
-    badgeColor:
-      'border-slate-200 bg-slate-100 text-slate-600 dark:border-zinc-600/50 dark:bg-zinc-800/70 dark:text-zinc-400',
-  },
-];
+export {
+  PHASE_IDS,
+  PROJECT_PHASES,
+  PRODUCTION_TYPES,
+  PRODUCTION_TYPE_LIST,
+  normalizeProjectPhase,
+  getPhaseMeta,
+} from './scheduleEstimator.js';
 
 /**
  * Formatea montos en Pesos Chilenos (CLP) sin decimales.

@@ -10,6 +10,11 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { INITIAL_PROJECTS, INITIAL_AUDIT_LOGS, USERS } from './data/mockData';
+import {
+  PHASE_IDS,
+  normalizeProjectPhase,
+  getPhaseMeta,
+} from './utils/scheduleEstimator';
 import TopBarRoleSelector from './components/TopBarRoleSelector';
 import DirectorDashboard from './components/DirectorDashboard';
 import ProjectDetailView from './components/ProjectDetailView';
@@ -184,39 +189,64 @@ export default function App() {
 
   // Mover proyecto de fase
   const handleMoveProjectPhase = (projectId, newPhase) => {
+    const normalized = normalizeProjectPhase(newPhase);
+    const phaseMeta = getPhaseMeta(normalized);
     updateProjectsAndSync((prev) =>
       prev.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              phase: newPhase,
-              daysRemaining: newPhase === 'Cerrado' ? 0 : p.daysRemaining || 7,
+              phase: normalized,
+              daysRemaining:
+                normalized === PHASE_IDS.DELIVERY_LAUNCH
+                  ? 0
+                  : p.daysRemaining || 7,
             }
           : p
       )
     );
     appendAuditLog(
       'Nicolás Iriarte',
-      `Proyecto ${projectId} movido a "${newPhase}"`,
+      `Proyecto ${projectId} movido a "${phaseMeta.label}"`,
       '200 OK',
       'info'
     );
   };
 
-  // Crear nuevo proyecto en Kanban
+  // Actualizar Partner de Distribución / Agencia de Lanzamiento
+  const handleUpdateDistributionPartner = (projectId, partnerName) => {
+    updateProjectsAndSync((prev) =>
+      prev.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              distributionPartner: partnerName,
+            }
+          : p
+      )
+    );
+  };
+
+  // Crear nuevo proyecto desde el Estimador de Cronograma
   const handleCreateProject = (formData) => {
     const nextIdx = projects.length + 1;
     const newId = `PRJ-2026-0${nextIdx}`;
     const newCode = `KNK-260${nextIdx}`;
+    const normalizedPhase = normalizeProjectPhase(formData.phase);
     const newProject = {
       id: newId,
       code: newCode,
       name: formData.name,
       client: formData.client,
-      phase: formData.phase,
+      projectType: formData.projectType || 'video_corporativo',
+      startDate: formData.startDate || '2026-10-06',
+      endDate: formData.endDate || '2026-11-10',
+      phase: normalizedPhase,
       daysRemaining: Number(formData.daysRemaining) || 15,
       shootLocation: formData.shootLocation || 'Santiago, RM',
-      shootDates: '02 Oct – 25 Oct 2026',
+      shootDates: formData.shootDates || '06 Oct – 10 Nov 2026',
+      distributionPartner: formData.distributionPartner || '',
+      phaseSchedule: formData.phaseSchedule || null,
       desiredMarginPct: Number(formData.desiredMarginPct) || 35,
       extraHourRateCLP: 55000,
       assignedFreelancers: ['usr-camila'],
@@ -233,7 +263,7 @@ export default function App() {
           id: `TSK-${Date.now()}`,
           assigneeId: 'usr-camila',
           title: 'Propuesta de Fotografía y Scouting Técnico Inicial',
-          dueDate: '2026-10-10',
+          dueDate: formData.phaseSchedule?.preEndDate || '2026-10-15',
           milestone: 'Preproducción',
           status: 'Pendiente',
           externalRefUrl: 'https://drive.google.com/drive/folders/kinok-nuevo-proyecto',
@@ -245,7 +275,7 @@ export default function App() {
     setSelectedProjectId(newId);
     appendAuditLog(
       'Nicolás Iriarte',
-      `Nuevo proyecto creado: ${formData.name}`,
+      `Nuevo proyecto creado con estimador: ${formData.name} (${getPhaseMeta(normalizedPhase).label})`,
       '201 CREATED',
       'success'
     );
@@ -568,6 +598,7 @@ export default function App() {
             onUpdateBudgetCategory={handleUpdateBudgetCategory}
             onUpdateMargin={handleUpdateMargin}
             onUpdatePhase={handleMoveProjectPhase}
+            onUpdateDistributionPartner={handleUpdateDistributionPartner}
             onAddExpense={handleAddExpense}
             onDeleteExpense={handleDeleteExpense}
             onToggleRevisionScope={handleToggleRevisionScope}

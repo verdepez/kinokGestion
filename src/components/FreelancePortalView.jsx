@@ -15,6 +15,7 @@ import {
   calculateDocumentTax,
   formatCLP,
   RETENCION_BHE_2026,
+  getPhaseMeta,
 } from '../utils/finance';
 import { USERS } from '../data/mockData';
 import NativeModal from './NativeModal';
@@ -177,8 +178,12 @@ export default function FreelancePortalView({
                     <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
                       {project.code}
                     </span>
-                    <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
-                      {project.phase}
+                    <span
+                      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                        getPhaseMeta(project.phase).badgeColor
+                      }`}
+                    >
+                      {getPhaseMeta(project.phase).label}
                     </span>
                   </div>
 

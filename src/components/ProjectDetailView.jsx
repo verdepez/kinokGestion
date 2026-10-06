@@ -15,16 +15,24 @@ import {
   FileText,
   Clock,
   Info,
+  Share2,
 } from 'lucide-react';
 import {
   BUDGET_CATEGORIES,
   PROJECT_PHASES,
+  PHASE_IDS,
+  PRODUCTION_TYPES,
+  normalizeProjectPhase,
   IVA_RATE,
   calculateDocumentTax,
   computeProjectMetrics,
   formatCLP,
   formatPct,
 } from '../utils/finance';
+import {
+  calculatePhaseSchedule,
+  formatShortDateES,
+} from '../utils/scheduleEstimator';
 
 export default function ProjectDetailView({
   project,
@@ -34,6 +42,7 @@ export default function ProjectDetailView({
   onUpdateBudgetCategory,
   onUpdateMargin,
   onUpdatePhase,
+  onUpdateDistributionPartner,
   onAddExpense,
   onDeleteExpense,
   onToggleRevisionScope,
@@ -58,6 +67,18 @@ export default function ProjectDetailView({
   });
 
   if (!project) return null;
+
+  const normalizedPhase = normalizeProjectPhase(project.phase);
+  const schedule =
+    project.phaseSchedule && Array.isArray(project.phaseSchedule.phases)
+      ? project.phaseSchedule
+      : calculatePhaseSchedule({
+          startDate: project.startDate || '2026-09-01',
+          endDate: project.endDate || '2026-10-15',
+          projectType: project.projectType || 'video_corporativo',
+        });
+  const prodTypeMeta =
+    PRODUCTION_TYPES[project.projectType] || PRODUCTION_TYPES.video_corporativo;
 
   const metrics = computeProjectMetrics(project);
   const sem = metrics.semaphore;
@@ -143,8 +164,12 @@ export default function ProjectDetailView({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-xl border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              {prodTypeMeta.label}
+            </span>
+
             <select
-              value={project.phase}
+              value={normalizedPhase}
               onChange={(e) => onUpdatePhase(project.id, e.target.value)}
               aria-label="Fase del proyecto"
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-emerald-300"
@@ -186,6 +211,63 @@ export default function ProjectDetailView({
                 <Calendar className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                 {project.shootDates}
               </span>
+            </div>
+
+            {/* Cronograma Gantt Compacto de Fases */}
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-950/70">
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <span className="font-semibold text-slate-700 dark:text-zinc-300">
+                  Cronograma Estimado ({schedule.totalDays} días)
+                </span>
+                <span className="font-mono text-slate-500 dark:text-zinc-400">
+                  Entrega / Lanzamiento: {formatShortDateES(schedule.endDate)}
+                </span>
+              </div>
+              <div className="flex h-5 w-full overflow-hidden rounded-lg bg-slate-200 dark:bg-zinc-800">
+                {schedule.phases
+                  .filter((ph) => !ph.isMilestone)
+                  .map((ph) => {
+                    const colorClass =
+                      ph.id === PHASE_IDS.PRE_PRODUCTION
+                        ? 'bg-sky-500'
+                        : ph.id === PHASE_IDS.PRODUCTION
+                        ? 'bg-violet-500 border-x border-white/30'
+                        : 'bg-indigo-500';
+                    return (
+                      <div
+                        key={ph.id}
+                        style={{ width: `${Math.max(8, ph.percentage)}%` }}
+                        className={`flex items-center justify-center px-1.5 text-[10px] font-bold text-white ${colorClass}`}
+                        title={`${ph.label}: ${ph.days} días (${formatShortDateES(
+                          ph.startDate,
+                          false
+                        )} → ${formatShortDateES(ph.endDate, false)})`}
+                      >
+                        <span className="truncate">
+                          {ph.shortLabel} {ph.percentage}% ({ph.days}d)
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Partner de Distribución / Agencia de Lanzamiento */}
+              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/70 pt-2 text-xs dark:border-zinc-800">
+                <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600 dark:text-zinc-400">
+                  <Share2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Partner Distribución / Lanzamiento:</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Sin partner asignado (ej. Agencia de medios / Canal)"
+                  value={project.distributionPartner || ''}
+                  onChange={(e) =>
+                    onUpdateDistributionPartner &&
+                    onUpdateDistributionPartner(project.id, e.target.value)
+                  }
+                  className="min-w-[240px] flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-800 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                />
+              </div>
             </div>
           </div>
 

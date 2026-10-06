@@ -4,6 +4,10 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { INITIAL_PROJECTS, INITIAL_AUDIT_LOGS } from './src/data/mockData.js';
+import {
+  normalizeProjectPhase,
+  calculatePhaseSchedule,
+} from './src/utils/scheduleEstimator.js';
 
 const { Pool } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,15 +38,28 @@ let memoryProjects = structuredClone(INITIAL_PROJECTS);
 let memoryAuditLogs = structuredClone(INITIAL_AUDIT_LOGS);
 
 function rowToProject(row) {
+  const projectType = row.project_type || 'video_corporativo';
+  const startDate = row.start_date || '2026-09-15';
+  const endDate = row.end_date || '2026-10-25';
+  const phaseSchedule =
+    row.phase_schedule && row.phase_schedule.phases
+      ? row.phase_schedule
+      : calculatePhaseSchedule({ startDate, endDate, projectType });
+
   return {
     id: row.id,
     code: row.code,
     name: row.name,
     client: row.client,
-    phase: row.phase,
+    projectType,
+    startDate,
+    endDate,
+    phase: normalizeProjectPhase(row.phase),
     daysRemaining: row.days_remaining,
     shootLocation: row.shoot_location,
-    shootDates: row.shoot_dates,
+    shootDates: row.shoot_dates || phaseSchedule.shootDatesLabel,
+    distributionPartner: row.distribution_partner || '',
+    phaseSchedule,
     desiredMarginPct: Number(row.desired_margin_pct),
     extraHourRateCLP: Number(row.extra_hour_rate_clp),
     assignedFreelancers: row.assigned_freelancers || ['usr-camila'],
@@ -54,20 +71,27 @@ function rowToProject(row) {
 }
 
 async function upsertProject(client, p, sortOrder = 0) {
+  const normalizedPhase = normalizeProjectPhase(p.phase);
   await client.query(
     `INSERT INTO projects (
-      id, code, name, client, phase, days_remaining,
-      shoot_location, shoot_dates, desired_margin_pct, extra_hour_rate_clp,
+      id, code, name, client, project_type, start_date, end_date,
+      phase, days_remaining, shoot_location, shoot_dates,
+      distribution_partner, phase_schedule, desired_margin_pct, extra_hour_rate_clp,
       assigned_freelancers, budget_categories, expenses, revisions, freelance_tasks, sort_order
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
     ON CONFLICT (id) DO UPDATE SET
       code = EXCLUDED.code,
       name = EXCLUDED.name,
       client = EXCLUDED.client,
+      project_type = EXCLUDED.project_type,
+      start_date = EXCLUDED.start_date,
+      end_date = EXCLUDED.end_date,
       phase = EXCLUDED.phase,
       days_remaining = EXCLUDED.days_remaining,
       shoot_location = EXCLUDED.shoot_location,
       shoot_dates = EXCLUDED.shoot_dates,
+      distribution_partner = EXCLUDED.distribution_partner,
+      phase_schedule = EXCLUDED.phase_schedule,
       desired_margin_pct = EXCLUDED.desired_margin_pct,
       extra_hour_rate_clp = EXCLUDED.extra_hour_rate_clp,
       assigned_freelancers = EXCLUDED.assigned_freelancers,
@@ -82,10 +106,15 @@ async function upsertProject(client, p, sortOrder = 0) {
       p.code,
       p.name,
       p.client,
-      p.phase,
+      p.projectType || 'video_corporativo',
+      p.startDate || '2026-09-15',
+      p.endDate || '2026-10-25',
+      normalizedPhase,
       Number(p.daysRemaining) || 0,
       p.shootLocation || '',
       p.shootDates || '',
+      p.distributionPartner || '',
+      JSON.stringify(p.phaseSchedule || null),
       Number(p.desiredMarginPct) || 35,
       Number(p.extraHourRateCLP) || 55000,
       JSON.stringify(p.assignedFreelancers || ['usr-camila']),
@@ -128,10 +157,15 @@ async function initDatabase() {
           code TEXT NOT NULL,
           name TEXT NOT NULL,
           client TEXT NOT NULL,
+          project_type TEXT DEFAULT 'video_corporativo',
+          start_date TEXT DEFAULT '2026-09-15',
+          end_date TEXT DEFAULT '2026-10-25',
           phase TEXT NOT NULL,
           days_remaining INT DEFAULT 15,
           shoot_location TEXT DEFAULT '',
           shoot_dates TEXT DEFAULT '',
+          distribution_partner TEXT DEFAULT '',
+          phase_schedule JSONB DEFAULT 'null'::jsonb,
           desired_margin_pct NUMERIC DEFAULT 35,
           extra_hour_rate_clp NUMERIC DEFAULT 55000,
           assigned_freelancers JSONB DEFAULT '[]'::jsonb,
@@ -142,6 +176,23 @@ async function initDatabase() {
           sort_order INT DEFAULT 0,
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
+      `);
+
+      // Migraciones no destructivas para bases PostgreSQL existentes en Railway
+      await client.query(`
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_type TEXT DEFAULT 'video_corporativo';
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS start_date TEXT DEFAULT '2026-09-15';
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS end_date TEXT DEFAULT '2026-10-25';
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS distribution_partner TEXT DEFAULT '';
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS phase_schedule JSONB DEFAULT 'null'::jsonb;
+      `);
+
+      // Normalizar estados semánticos antiguos en la base de datos ('Cerrado' -> 'DELIVERY_LAUNCH', etc.)
+      await client.query(`
+        UPDATE projects SET phase = 'PRE_PRODUCTION' WHERE phase = 'Preproducción';
+        UPDATE projects SET phase = 'PRODUCTION' WHERE phase IN ('Producción', 'Producción / Rodaje');
+        UPDATE projects SET phase = 'POST_PRODUCTION' WHERE phase = 'Postproducción';
+        UPDATE projects SET phase = 'DELIVERY_LAUNCH', distribution_partner = COALESCE(NULLIF(distribution_partner, ''), 'McCann Worldgroup Chile · Distribución Multiplataforma') WHERE phase IN ('Cerrado', 'CLOSED');
       `);
 
       await client.query(`
