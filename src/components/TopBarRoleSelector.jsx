@@ -33,7 +33,7 @@ export default function TopBarRoleSelector({
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
         {/* Marca Kinok OS (PWA) */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E73913] text-white shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#015966] text-white shadow-sm">
             <Film className="h-4 w-4" />
           </div>
           <div>
@@ -57,7 +57,7 @@ export default function TopBarRoleSelector({
             <button
               type="button"
               onClick={onInstallPwa}
-              className="flex items-center gap-1.5 rounded-xl bg-[#E73913] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#c92f0e]"
+              className="flex items-center gap-1.5 rounded-xl bg-[#015966] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#016478]"
               title="Instalar Kinok OS como aplicación PWA en tu dispositivo"
             >
               <Download className="h-3.5 w-3.5" />
@@ -72,7 +72,7 @@ export default function TopBarRoleSelector({
               className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-zinc-800 dark:bg-zinc-800/70 dark:text-zinc-300 dark:hover:bg-zinc-800"
               title="Volver al portafolio público de Kinok"
             >
-              <Globe className="h-3.5 w-3.5 text-[#E73913]" />
+              <Globe className="h-3.5 w-3.5 text-[#0BB2CB]" />
               <span className="hidden sm:inline">Landing Pública</span>
             </button>
           )}

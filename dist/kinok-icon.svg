@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <rect width="512" height="512" rx="96" fill="#0C0C0B"/>
-  <rect x="32" y="32" width="448" height="448" rx="72" stroke="#E73913" stroke-width="8"/>
-  <circle cx="256" cy="216" r="108" stroke="#E73913" stroke-width="20"/>
-  <circle cx="256" cy="216" r="44" fill="#E73913"/>
+  <rect x="32" y="32" width="448" height="448" rx="72" stroke="#0BB2CB" stroke-width="8"/>
+  <circle cx="256" cy="216" r="108" stroke="#0BB2CB" stroke-width="20"/>
+  <circle cx="256" cy="216" r="44" fill="#0BB2CB"/>
   <path d="M148 396L216 308H296L364 396H148Z" fill="#F4F4F4"/>
-  <text x="256" y="454" text-anchor="middle" fill="#E73913" font-family="sans-serif" font-weight="900" font-size="44" letter-spacing="8">KINOK</text>
+  <text x="256" y="454" text-anchor="middle" fill="#0BB2CB" font-family="sans-serif" font-weight="900" font-size="44" letter-spacing="8">KINOK</text>
 </svg>
 

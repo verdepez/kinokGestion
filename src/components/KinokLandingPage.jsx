@@ -316,7 +316,7 @@ const KINOK_PORTRAIT_URL =
   'https://i.vimeocdn.com/portrait/126732643_360x360?subrect=674%2C650%2C2219%2C2195&r=cover&sig=b133f6420003de9f94a17e112b4f653122523a1dd7ed8d6003d8d867c1299dc5&v=1&region=us';
 
 // Ícono constructivista original inspirado en el emblema de davincis.digital/rbyba/
-function ConstructivistEyeIcon({ className = 'w-6 h-6', fill = '#E73913' }) {
+function ConstructivistEyeIcon({ className = 'w-6 h-6', fill = '#0BB2CB' }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -348,7 +348,7 @@ function RbybaVideoFrame({
     >
       {isPlaying ? (
         <iframe
-          src={`https://player.vimeo.com/video/${video.id}?autoplay=1&color=e73913&title=0&byline=0&portrait=0`}
+          src={`https://player.vimeo.com/video/${video.id}?autoplay=1&color=0bb2cb&title=0&byline=0&portrait=0`}
           title={video.title}
           className="h-full w-full border-0"
           allow="autoplay; fullscreen; picture-in-picture"
@@ -369,7 +369,7 @@ function RbybaVideoFrame({
             <span className="bg-black/60 px-2.5 py-1 backdrop-blur-sm">
               {video.client} · {video.year}
             </span>
-            <span className="bg-[#E73913] px-2.5 py-1 text-white">
+            <span className="bg-[#015966] px-2.5 py-1 text-white">
               {video.resolution}
             </span>
           </div>
@@ -387,7 +387,7 @@ function RbybaVideoFrame({
                 background: 'radial-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 70%)',
               }}
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#E73913] text-white shadow-[0_12px_35px_rgba(231,57,19,0.55)] transition-colors group-hover:bg-white group-hover:text-[#0C0C0B]">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#015966] text-white shadow-[0_12px_35px_rgba(1,125,150,0.55)] transition-colors group-hover:bg-white group-hover:text-[#0C0C0B]">
                 <Play className="ml-1 h-6 w-6 fill-current" />
               </span>
             </span>
@@ -396,7 +396,7 @@ function RbybaVideoFrame({
           {/* Pie del frame */}
           <div className=" pointer-events-none absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#E73913]">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#0BB2CB]">
                 VIMEO/{video.id} · {video.duration}
               </p>
               <h3
@@ -413,7 +413,7 @@ function RbybaVideoFrame({
                   e.stopPropagation();
                   onOpenCinema(video);
                 }}
-                className="pointer-events-auto hidden items-center gap-1.5 bg-black/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-[#E73913] sm:inline-flex"
+                className="pointer-events-auto hidden items-center gap-1.5 bg-black/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-[#015966] sm:inline-flex"
               >
                 <Maximize2 className="h-3 w-3" />
                 <span>Pantalla Completa</span>
@@ -474,7 +474,7 @@ export default function KinokLandingPage({
   };
 
   return (
-    <div className="min-h-screen bg-[#0C0C0B] text-[#0C0C0B] selection:bg-[#E73913] selection:text-white">
+    <div className="min-h-screen bg-[#0C0C0B] text-[#0C0C0B] selection:bg-[#015966] selection:text-white">
       {/* =====================================================================
           SECCIÓN 1: HERO CONSTRUCTIVISTA EN NEGRO + VIDEO BACKGROUND DE KINOK
           Inspirado directamente en el bloque superior de https://davincis.digital/rbyba/
@@ -503,9 +503,9 @@ export default function KinokLandingPage({
             href="https://vimeo.com/kinokprod"
             target="_blank"
             rel="noreferrer"
-            className="group flex items-center gap-2.5 border border-white/20 bg-black/50 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-md transition hover:border-[#E73913] hover:bg-[#E73913]"
+            className="group flex items-center gap-2.5 border border-white/20 bg-black/50 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-md transition hover:border-[#0BB2CB] hover:bg-[#015966]"
           >
-            <span className="h-2 w-2 rounded-full bg-[#E73913] group-hover:bg-white" />
+            <span className="h-2 w-2 rounded-full bg-[#015966] group-hover:bg-white" />
             <span>VIMEO / KINOKPROD</span>
             <ArrowUpRight className="h-3.5 w-3.5" />
           </a>
@@ -513,7 +513,7 @@ export default function KinokLandingPage({
           {/* Centro: Identificador de Estudio */}
           <div className="hidden items-center gap-3 text-[11px] font-bold uppercase tracking-[0.26em] text-white/80 md:flex">
             <span>NICOLÁS IRIARTE O&apos;RYAN</span>
-            <span className="text-[#E73913]">—</span>
+            <span className="text-[#0BB2CB]">—</span>
             <span>SANTIAGO, CHILE</span>
           </div>
 
@@ -521,19 +521,19 @@ export default function KinokLandingPage({
           <div className="flex items-center gap-2 sm:gap-3">
             <a
               href="#obras"
-              className="hidden text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:text-[#E73913] sm:inline-block"
+              className="hidden text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:text-[#0BB2CB] sm:inline-block"
             >
               Obras (65)
             </a>
             <a
               href="#manifiesto"
-              className="hidden text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:text-[#E73913] sm:inline-block"
+              className="hidden text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:text-[#0BB2CB] sm:inline-block"
             >
               Manifiesto
             </a>
             <a
               href="#contacto"
-              className="hidden text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:text-[#E73913] sm:inline-block"
+              className="hidden text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:text-[#0BB2CB] sm:inline-block"
             >
               Contacto
             </a>
@@ -543,11 +543,11 @@ export default function KinokLandingPage({
               type="button"
               onClick={() => setIsGatewayModalOpen(true)}
               title="Puerta de entrada a Kinok OS (Sistema Interno PWA)"
-              className="group relative flex items-center gap-2 border border-[#E73913]/60 bg-black/75 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md transition hover:bg-[#E73913]"
+              className="group relative flex items-center gap-2 border border-[#0BB2CB]/60 bg-black/75 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md transition hover:bg-[#015966]"
             >
               <ConstructivistEyeIcon className="h-4 w-4 transition-transform group-hover:rotate-12" fill="currentColor" />
               <span>KINOK OS</span>
-              <span className="rounded bg-[#E73913] px-1 py-0.5 font-mono text-[8px] text-white group-hover:bg-black">
+              <span className="rounded bg-[#015966] px-1 py-0.5 font-mono text-[8px] text-white group-hover:bg-black">
                 PWA
               </span>
             </button>
@@ -559,7 +559,7 @@ export default function KinokLandingPage({
           <span>CINE-OJO · 4K UHD · SANTIAGO</span>
         </div>
 
-        {/* Bloque Central Tipográfico Constructivista en Rojo #E73913 (Homólogo a RED BLUE YELLOW BLACK AGAIN) */}
+        {/* Bloque Central Tipográfico Constructivista en Rojo #0BB2CB (Homólogo a RED BLUE YELLOW BLACK AGAIN) */}
         <div className="relative z-10 mx-auto flex min-h-[82vh] max-w-[1160px] flex-col items-center justify-center px-5 py-16 text-center sm:px-8">
           <p className="mb-4 font-mono text-[11px] font-semibold uppercase tracking-[0.35em] text-white/85">
             DIRECTOR &amp; VIDEO PRODUCER · SANTIAGO DE CHILE
@@ -567,7 +567,7 @@ export default function KinokLandingPage({
 
           <div className="relative inline-block">
             <h1
-              className="select-none text-[17vw] font-normal uppercase leading-[0.83] tracking-[-0.03em] text-[#E73913] sm:text-[118px] md:text-[148px]"
+              className="select-none text-[17vw] font-normal uppercase leading-[0.83] tracking-[-0.03em] text-[#0BB2CB] sm:text-[118px] md:text-[148px]"
               style={{ fontFamily: "'Anton', 'Space Grotesk', sans-serif" }}
             >
               <span className="block">LUZ REAL</span>
@@ -575,14 +575,14 @@ export default function KinokLandingPage({
               <span className="block">TERRITORIO</span>
               <span className="inline-flex items-baseline gap-3">
                 <span>KINOK</span>
-                <ConstructivistEyeIcon className="h-7 w-7 sm:h-11 sm:w-11" fill="#E73913" />
+                <ConstructivistEyeIcon className="h-7 w-7 sm:h-11 sm:w-11" fill="#0BB2CB" />
               </span>
             </h1>
           </div>
 
           <p className="mt-6 max-w-xl text-sm font-medium tracking-wide text-white/90 sm:text-base">
             “Soy <strong>Nicolás Iriarte O&apos;Ryan</strong>, filmmaker de Santiago, Chile.{' '}
-            <strong className="text-[#E73913]">KINOK</strong> es el lugar donde realizamos todo lo
+            <strong className="text-[#0BB2CB]">KINOK</strong> es el lugar donde realizamos todo lo
             que nos gusta.”
           </p>
 
@@ -591,7 +591,7 @@ export default function KinokLandingPage({
             <button
               type="button"
               onClick={() => setCinemaVideo(flagshipWork)}
-              className="group flex items-center gap-3 bg-[#E73913] px-7 py-4 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-white hover:text-[#0C0C0B]"
+              className="group flex items-center gap-3 bg-[#015966] px-7 py-4 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-white hover:text-[#0C0C0B]"
             >
               <Play className="h-4 w-4 fill-current" />
               <span>Reproducir Reel 4K</span>
@@ -612,7 +612,7 @@ export default function KinokLandingPage({
          ===================================================================== */}
       <section id="manifiesto" className="relative bg-white text-[#0C0C0B]">
         <div className="mx-auto max-w-[1060px] px-5 pb-24 pt-16 sm:px-8 sm:pt-24">
-          {/* Frame Hero Superpuesto con cita gigante en #E73913 como en rbyba (top: 629px / 814px) */}
+          {/* Frame Hero Superpuesto con cita gigante en #0BB2CB como en rbyba (top: 629px / 814px) */}
           <div className="relative">
             <div className="overflow-hidden rounded-[2px] bg-[#0C0C0B] shadow-2xl">
               <RbybaVideoFrame
@@ -627,7 +627,7 @@ export default function KinokLandingPage({
             {/* Cita Manifiesto Constructivista #1 */}
             <div className="mt-12 text-center sm:mt-16">
               <h2
-                className="mx-auto max-w-[980px] text-[42px] uppercase leading-[0.88] tracking-[-0.02em] text-[#E73913] sm:text-[72px] md:text-[85px]"
+                className="mx-auto max-w-[980px] text-[42px] uppercase leading-[0.88] tracking-[-0.02em] text-[#0BB2CB] sm:text-[72px] md:text-[85px]"
                 style={{ fontFamily: "'Anton', 'Space Grotesk', sans-serif" }}
               >
                 &ldquo;¡EL CINE NO ES UN FORMATO! LA IMAGEN INERTE HA MUERTO. LA CÁMARA VIVA TOMA LA
@@ -660,7 +660,7 @@ export default function KinokLandingPage({
               className="mx-auto max-w-[980px] text-[44px] uppercase leading-[0.88] tracking-[-0.02em] sm:text-[74px] md:text-[85px]"
               style={{ fontFamily: "'Anton', 'Space Grotesk', sans-serif" }}
             >
-              <span className="text-[#E73913]">
+              <span className="text-[#0BB2CB]">
                 &ldquo;EL GUION CONVENCIONAL QUEDÓ ATRÁS
                 <br />
               </span>
@@ -699,7 +699,7 @@ export default function KinokLandingPage({
               <br />
               OBRAS DE DIRECCIÓN &amp; FOTOGRAFÍA
               <br />
-              POR <span className="text-[#E73913]">NICOLÁS IRIARTE O&apos;RYAN</span>
+              POR <span className="text-[#0BB2CB]">NICOLÁS IRIARTE O&apos;RYAN</span>
             </h2>
           </div>
 
@@ -717,10 +717,10 @@ export default function KinokLandingPage({
           </div>
 
           {/* =================================================================
-              TRÍPTICO DE CASOS CON LÍNEAS TÉCNICAS #E73913 (IDÉNTICO A RBYBA)
+              TRÍPTICO DE CASOS CON LÍNEAS TÉCNICAS #0BB2CB (IDÉNTICO A RBYBA)
              ================================================================= */}
           <div className="mt-20 space-y-24">
-            {/* CASO 01: Miniatura Izquierda + Líneas L #E73913 + Video Derecha */}
+            {/* CASO 01: Miniatura Izquierda + Líneas L #0BB2CB + Video Derecha */}
             <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
               <div className="flex flex-col items-start lg:col-span-3">
                 <div
@@ -735,24 +735,24 @@ export default function KinokLandingPage({
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent" />
                 </div>
 
-                <p className="mt-2.5 font-mono text-[9px] font-medium uppercase leading-[11px] tracking-[0.08em] text-[#E73913]">
+                <p className="mt-2.5 font-mono text-[9px] font-medium uppercase leading-[11px] tracking-[0.08em] text-[#0BB2CB]">
                   FOTOGRAFÍA ORIGINAL
                   <br />
                   RODAJE 24FPS
                 </p>
 
-                {/* Conector Técnico SVG en L (#E73913) inspirado en rbyba lines 3871-4046 */}
+                {/* Conector Técnico SVG en L (#0BB2CB) inspirado en rbyba lines 3871-4046 */}
                 <div className="relative mt-2 hidden h-28 w-full lg:block">
                   <svg className="h-full w-full overflow-visible" fill="none">
                     <path
                       d="M 18 0 L 18 82 L 210 82"
-                      stroke="#E73913"
+                      stroke="#0BB2CB"
                       strokeWidth="1"
                     />
-                    <circle cx="18" cy="0" r="2.5" fill="#E73913" />
-                    <circle cx="210" cy="82" r="2.5" fill="#E73913" />
+                    <circle cx="18" cy="0" r="2.5" fill="#0BB2CB" />
+                    <circle cx="210" cy="82" r="2.5" fill="#0BB2CB" />
                   </svg>
-                  <span className="absolute bottom-7 right-2 text-right font-mono text-[9px] font-medium uppercase leading-[11px] tracking-[0.08em] text-[#E73913]">
+                  <span className="absolute bottom-7 right-2 text-right font-mono text-[9px] font-medium uppercase leading-[11px] tracking-[0.08em] text-[#0BB2CB]">
                     MASTERIZACIÓN &amp;
                     <br />
                     CORTE FINAL 4K
@@ -771,7 +771,7 @@ export default function KinokLandingPage({
               </div>
             </div>
 
-            {/* CASO 02: Video Izquierda + Miniatura Derecha + Líneas L #E73913 */}
+            {/* CASO 02: Video Izquierda + Miniatura Derecha + Líneas L #0BB2CB */}
             <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
               <div className="relative order-2 lg:order-1 lg:col-span-9">
                 <RbybaVideoFrame
@@ -795,7 +795,7 @@ export default function KinokLandingPage({
                   />
                 </div>
 
-                <p className="mt-2.5 font-mono text-[9px] font-medium uppercase leading-[11px] tracking-[0.08em] text-[#E73913]">
+                <p className="mt-2.5 font-mono text-[9px] font-medium uppercase leading-[11px] tracking-[0.08em] text-[#0BB2CB]">
                   REGISTRO DOCUMENTAL
                   <br />
                   PATAGONIA CHILENA
@@ -805,13 +805,13 @@ export default function KinokLandingPage({
                   <svg className="h-full w-full overflow-visible" fill="none">
                     <path
                       d="M 210 0 L 210 82 L 10 82"
-                      stroke="#E73913"
+                      stroke="#0BB2CB"
                       strokeWidth="1"
                     />
-                    <circle cx="210" cy="0" r="2.5" fill="#E73913" />
-                    <circle cx="10" cy="82" r="2.5" fill="#E73913" />
+                    <circle cx="210" cy="0" r="2.5" fill="#0BB2CB" />
+                    <circle cx="10" cy="82" r="2.5" fill="#0BB2CB" />
                   </svg>
-                  <span className="absolute bottom-7 left-4 text-left font-mono text-[9px] font-medium uppercase leading-[11px] tracking-[0.08em] text-[#E73913]">
+                  <span className="absolute bottom-7 left-4 text-left font-mono text-[9px] font-medium uppercase leading-[11px] tracking-[0.08em] text-[#0BB2CB]">
                     CAMPAÑA NACIONAL
                     <br />
                     GREENPEACE CHILE
@@ -828,7 +828,7 @@ export default function KinokLandingPage({
             <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
               <div>
                 <div
-                  className="text-[64px] uppercase leading-[0.85] tracking-[-0.02em] text-[#E73913] sm:text-[82px]"
+                  className="text-[64px] uppercase leading-[0.85] tracking-[-0.02em] text-[#0BB2CB] sm:text-[82px]"
                   style={{ fontFamily: "'Anton', 'Space Grotesk', sans-serif" }}
                 >
                   65+
@@ -843,7 +843,7 @@ export default function KinokLandingPage({
 
               <div>
                 <div
-                  className="text-[64px] uppercase leading-[0.85] tracking-[-0.02em] text-[#E73913] sm:text-[82px]"
+                  className="text-[64px] uppercase leading-[0.85] tracking-[-0.02em] text-[#0BB2CB] sm:text-[82px]"
                   style={{ fontFamily: "'Anton', 'Space Grotesk', sans-serif" }}
                 >
                   4K UHD
@@ -858,7 +858,7 @@ export default function KinokLandingPage({
 
               <div>
                 <div
-                  className="text-[64px] uppercase leading-[0.85] tracking-[-0.02em] text-[#E73913] sm:text-[82px]"
+                  className="text-[64px] uppercase leading-[0.85] tracking-[-0.02em] text-[#0BB2CB] sm:text-[82px]"
                   style={{ fontFamily: "'Anton', 'Space Grotesk', sans-serif" }}
                 >
                   100%
@@ -879,7 +879,7 @@ export default function KinokLandingPage({
           <div id="obras" className="mt-24 scroll-mt-12">
             <div className="flex flex-col justify-between gap-6 border-b-2 border-[#0C0C0B] pb-6 md:flex-row md:items-end">
               <div>
-                <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-[#E73913]">
+                <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-[#0BB2CB]">
                   ARCHIVO OFICIAL · HTTPS://VIMEO.COM/KINOKPROD
                 </p>
                 <h2
@@ -904,7 +904,7 @@ export default function KinokLandingPage({
                     onClick={() => setActiveCategory(tab.id)}
                     className={`px-3.5 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] transition ${
                       activeCategory === tab.id
-                        ? 'bg-[#E73913] text-white'
+                        ? 'bg-[#015966] text-white'
                         : 'bg-[#F4F4F4] text-[#0C0C0B] hover:bg-[#0C0C0B] hover:text-white'
                     }`}
                   >
@@ -919,7 +919,7 @@ export default function KinokLandingPage({
               {filteredWorks.map((work, index) => (
                 <article
                   key={work.id}
-                  className={`group flex flex-col justify-between border border-[#0C0C0B]/15 bg-[#FAFAFA] p-3 transition hover:border-[#E73913] ${
+                  className={`group flex flex-col justify-between border border-[#0C0C0B]/15 bg-[#FAFAFA] p-3 transition hover:border-[#0BB2CB] ${
                     index === 0 && activeCategory === 'todos' ? 'md:col-span-2' : ''
                   }`}
                 >
@@ -934,7 +934,7 @@ export default function KinokLandingPage({
 
                     <div className="mt-4 flex items-start justify-between gap-4 px-1">
                       <div>
-                        <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#E73913]">
+                        <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#0BB2CB]">
                           <span>0{index + 1}</span>
                           <span>/</span>
                           <span>{work.categoryLabel}</span>
@@ -960,7 +960,7 @@ export default function KinokLandingPage({
                       <button
                         type="button"
                         onClick={() => setCinemaVideo(work)}
-                        className="font-bold text-[#0C0C0B] underline decoration-[#E73913] decoration-2 underline-offset-4 hover:text-[#E73913]"
+                        className="font-bold text-[#0C0C0B] underline decoration-[#0BB2CB] decoration-2 underline-offset-4 hover:text-[#0BB2CB]"
                       >
                         VER EN CINE
                       </button>
@@ -968,7 +968,7 @@ export default function KinokLandingPage({
                         href={work.vimeoUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-bold text-[#E73913] hover:underline"
+                        className="inline-flex items-center gap-1 font-bold text-[#0BB2CB] hover:underline"
                       >
                         <span>VIMEO</span>
                         <ArrowUpRight className="h-3 w-3" />
@@ -988,7 +988,7 @@ export default function KinokLandingPage({
               className="text-[46px] uppercase leading-[0.88] tracking-[-0.02em] sm:text-[76px] md:text-[85px]"
               style={{ fontFamily: "'Anton', 'Space Grotesk', sans-serif" }}
             >
-              <span className="text-[#E73913]">...EL HOMBRE CON </span>
+              <span className="text-[#0BB2CB]">...EL HOMBRE CON </span>
               <br />
               <span className="text-[#0C0C0B]">LA CÁMARA DE CINE</span>
             </h2>
@@ -1012,10 +1012,10 @@ export default function KinokLandingPage({
       </section>
 
       {/* =====================================================================
-          SECCIÓN 3: BLOQUE FINAL ROJO BERMELLÓN (#E73913) + PUERTA DE ENTRADA PWA
+          SECCIÓN 3: BLOQUE FINAL ROJO BERMELLÓN (#0BB2CB) + PUERTA DE ENTRADA PWA
           Inspirado directamente en el cierre rojo de https://davincis.digital/rbyba/ (top: 7362px)
          ===================================================================== */}
-      <footer id="contacto" className="relative bg-[#E73913] text-[#F4F4F4]">
+      <footer id="contacto" className="relative bg-[#015966] text-[#F4F4F4]">
         <div className="mx-auto max-w-[1060px] px-5 py-20 sm:px-8 sm:py-28">
           <div className="text-center">
             <p className="text-lg font-medium tracking-wide text-[#F4F4F4]">
@@ -1122,7 +1122,7 @@ export default function KinokLandingPage({
                 onClick={() => setIsGatewayModalOpen(true)}
                 className="flex items-center gap-2 bg-[#0C0C0B] px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-lg transition hover:bg-white hover:text-[#0C0C0B]"
               >
-                <Lock className="h-3.5 w-3.5 text-[#E73913]" />
+                <Lock className="h-3.5 w-3.5 text-[#0BB2CB]" />
                 <span>Kinok OS · Acceso Interno (PWA)</span>
               </button>
             </div>
@@ -1142,7 +1142,7 @@ export default function KinokLandingPage({
           <div className="w-full max-w-5xl">
             <div className="mb-3 flex items-center justify-between gap-4 text-white">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#E73913]">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#0BB2CB]">
                   {cinemaVideo.client} · {cinemaVideo.resolution} · VIMEO/{cinemaVideo.id}
                 </p>
                 <h3
@@ -1155,7 +1155,7 @@ export default function KinokLandingPage({
               <button
                 type="button"
                 onClick={() => setCinemaVideo(null)}
-                className="flex items-center gap-1.5 border border-white/25 bg-white/10 px-3.5 py-2 font-mono text-xs uppercase tracking-wider text-white transition hover:bg-[#E73913]"
+                className="flex items-center gap-1.5 border border-white/25 bg-white/10 px-3.5 py-2 font-mono text-xs uppercase tracking-wider text-white transition hover:bg-[#015966]"
               >
                 <X className="h-4 w-4" />
                 <span>Cerrar</span>
@@ -1164,7 +1164,7 @@ export default function KinokLandingPage({
 
             <div className="aspect-video w-full overflow-hidden border border-white/15 bg-black shadow-2xl">
               <iframe
-                src={`https://player.vimeo.com/video/${cinemaVideo.id}?autoplay=1&color=e73913&title=0&byline=0&portrait=0`}
+                src={`https://player.vimeo.com/video/${cinemaVideo.id}?autoplay=1&color=0bb2cb&title=0&byline=0&portrait=0`}
                 title={cinemaVideo.title}
                 className="h-full w-full border-0"
                 allow="autoplay; fullscreen; picture-in-picture"
@@ -1185,7 +1185,7 @@ export default function KinokLandingPage({
           aria-labelledby="kinok-pwa-gateway-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
         >
-          <div className="relative w-full max-w-md border-2 border-[#E73913] bg-[#0C0C0B] p-6 text-white shadow-[0_25px_70px_rgba(231,57,19,0.35)] sm:p-7">
+          <div className="relative w-full max-w-md border-2 border-[#0BB2CB] bg-[#0C0C0B] p-6 text-white shadow-[0_25px_70px_rgba(1,125,150,0.35)] sm:p-7">
             <button
               type="button"
               onClick={() => setIsGatewayModalOpen(false)}
@@ -1196,11 +1196,11 @@ export default function KinokLandingPage({
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center bg-[#E73913] text-white">
+              <div className="flex h-11 w-11 items-center justify-center bg-[#015966] text-white">
                 <ConstructivistEyeIcon className="h-6 w-6" fill="#FFFFFF" />
               </div>
               <div>
-                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#E73913]">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#0BB2CB]">
                   INTRANET &amp; SISTEMA INTERNO PWA
                 </span>
                 <h3
@@ -1223,7 +1223,7 @@ export default function KinokLandingPage({
             <div className="mt-4 border border-white/15 bg-white/5 p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5">
-                  <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-[#E73913]" />
+                  <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-[#0BB2CB]" />
                   <div>
                     <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-white">
                       Modo App Independiente (PWA)
@@ -1241,7 +1241,7 @@ export default function KinokLandingPage({
                   <button
                     type="button"
                     onClick={onInstallPwa}
-                    className="shrink-0 bg-[#E73913] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-white hover:text-[#0C0C0B]"
+                    className="shrink-0 bg-[#015966] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-white hover:text-[#0C0C0B]"
                   >
                     Instalar
                   </button>
@@ -1264,17 +1264,17 @@ export default function KinokLandingPage({
                   value={accessPin}
                   onChange={(e) => setAccessPin(e.target.value)}
                   placeholder="Ingresa 2026 o presiona entrar..."
-                  className="mt-1.5 w-full border border-white/20 bg-black px-3.5 py-2.5 font-mono text-xs text-white placeholder-zinc-500 focus:border-[#E73913] focus:outline-none"
+                  className="mt-1.5 w-full border border-white/20 bg-black px-3.5 py-2.5 font-mono text-xs text-white placeholder-zinc-500 focus:border-[#0BB2CB] focus:outline-none"
                 />
                 {pinError && (
-                  <p className="mt-1.5 font-mono text-[11px] text-[#E73913]">{pinError}</p>
+                  <p className="mt-1.5 font-mono text-[11px] text-[#0BB2CB]">{pinError}</p>
                 )}
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <button
                   type="submit"
-                  className="flex items-center justify-center gap-2 bg-[#E73913] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] text-white transition hover:bg-white hover:text-[#0C0C0B]"
+                  className="flex items-center justify-center gap-2 bg-[#015966] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] text-white transition hover:bg-white hover:text-[#0C0C0B]"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   <span>Entrar como Director</span>
