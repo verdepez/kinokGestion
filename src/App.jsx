@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   X,
   RotateCcw,
+  Plus,
 } from 'lucide-react';
 import { INITIAL_PROJECTS, INITIAL_AUDIT_LOGS, USERS } from './data/mockData';
 import {
@@ -20,6 +21,7 @@ import DirectorDashboard from './components/DirectorDashboard';
 import ProjectDetailView from './components/ProjectDetailView';
 import FreelancePortalView from './components/FreelancePortalView';
 import NativeModal from './components/NativeModal';
+import ScheduleEstimatorModal from './components/ScheduleEstimatorModal';
 
 export default function App() {
   // Tema visual: 'light' por defecto con opción de 'dark'
@@ -507,6 +509,7 @@ export default function App() {
     projects.find((p) => p.id === selectedProjectId) || projects[0];
 
   const isDirector = currentRole === 'director';
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
 
   return (
     <div
@@ -525,57 +528,71 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
       />
 
-      {/* Sub-navegación limpia e intuitiva */}
-      <div className="border-b border-slate-200 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/60">
+      {/* Sub-navegación superior (Solo Desktop md+) con botón + Cotizar Proyecto integrado */}
+      <div className="hidden border-b border-slate-200 bg-white md:block dark:border-zinc-800/80 dark:bg-zinc-900/60">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
           {isDirector ? (
-            <nav className="flex flex-wrap items-center gap-1.5" aria-label="Navegación principal">
-              <button
-                type="button"
-                onClick={() => setActiveView('dashboard')}
-                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-                  activeView === 'dashboard'
-                    ? 'bg-emerald-600 text-white shadow-sm dark:bg-emerald-500 dark:text-zinc-950'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white'
-                }`}
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                <span>Panel de Proyectos</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveView('project-detail')}
-                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-                  activeView === 'project-detail'
-                    ? 'bg-emerald-600 text-white shadow-sm dark:bg-emerald-500 dark:text-zinc-950'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white'
-                }`}
-              >
-                <Calculator className="h-4 w-4" />
-                <span>Presupuesto y Gastos</span>
-                <span
-                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] ${
-                    activeView === 'project-detail'
-                      ? 'bg-white/20 text-white dark:bg-zinc-950/20 dark:text-zinc-950'
-                      : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+            <nav
+              className="flex w-full flex-wrap items-center justify-between gap-2"
+              aria-label="Navegación principal"
+            >
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('dashboard')}
+                  className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+                    activeView === 'dashboard'
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-zinc-800 dark:text-white'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white'
                   }`}
                 >
-                  {selectedProject.code}
-                </span>
-              </button>
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>Panel de Proyectos</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveView('project-detail')}
+                  className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+                    activeView === 'project-detail'
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-zinc-800 dark:text-white'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white'
+                  }`}
+                >
+                  <Calculator className="h-4 w-4" />
+                  <span>Presupuesto y Gastos</span>
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] ${
+                      activeView === 'project-detail'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                    }`}
+                  >
+                    {selectedProject.code}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveView('freelance-portal')}
+                  className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-medium transition ${
+                    activeView === 'freelance-portal'
+                      ? 'bg-amber-500 text-white font-semibold dark:bg-amber-400 dark:text-zinc-950'
+                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  <Briefcase className="h-4 w-4" />
+                  <span>Vista Freelance</span>
+                </button>
+              </div>
 
               <button
                 type="button"
-                onClick={() => setActiveView('freelance-portal')}
-                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-medium transition ${
-                  activeView === 'freelance-portal'
-                    ? 'bg-amber-500 text-white font-semibold dark:bg-amber-400 dark:text-zinc-950'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200'
-                }`}
+                onClick={() => setIsQuoteModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm ring-2 ring-emerald-500/20 transition hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
               >
-                <Briefcase className="h-4 w-4" />
-                <span>Vista Freelance</span>
+                <Plus className="h-4 w-4 stroke-[2.5]" />
+                <span>Cotizar Proyecto</span>
               </button>
             </nav>
           ) : (
@@ -589,37 +606,6 @@ export default function App() {
               </span>
             </nav>
           )}
-
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[11px] font-medium ${
-                dbConnected
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
-                  : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400'
-              }`}
-              title={
-                dbConnected
-                  ? 'Conectado a PostgreSQL en Railway'
-                  : 'Ejecutando en memoria local (sin DATABASE_URL)'
-              }
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  dbConnected ? 'bg-emerald-500' : 'bg-slate-400'
-                }`}
-              />
-              {dbConnected ? 'PostgreSQL Activo' : 'Memoria Local'}
-            </span>
-
-            <button
-              type="button"
-              onClick={handleResetDemoData}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-200"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Restaurar demo</span>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -627,7 +613,7 @@ export default function App() {
       {forbiddenToast && (
         <div
           role="alert"
-          className="fixed bottom-5 right-5 z-40 flex max-w-sm items-start gap-3 rounded-2xl border border-rose-300 bg-white p-4 text-xs shadow-xl dark:border-rose-500/60 dark:bg-zinc-900"
+          className="fixed bottom-20 right-4 z-50 flex max-w-sm items-start gap-3 rounded-2xl border border-rose-300 bg-white p-4 text-xs shadow-xl md:bottom-5 md:right-5 dark:border-rose-500/60 dark:bg-zinc-900"
         >
           <ShieldAlert className="h-5 w-5 shrink-0 text-rose-500" />
           <div className="flex-1">
@@ -658,7 +644,7 @@ export default function App() {
       )}
 
       {/* Área de Contenido Principal */}
-      <main className="mx-auto w-full max-w-[1440px] flex-1 p-4 sm:p-6">
+      <main className="mx-auto w-full max-w-[1440px] flex-1 p-4 pb-28 sm:p-6 md:pb-6">
         {currentRole === 'freelance' || activeView === 'freelance-portal' ? (
           <FreelancePortalView
             projects={projects}
@@ -694,6 +680,86 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Menú Inferior Fijo en Mobile (< md) con botón destacado "+ Cotizar Proyecto" */}
+      {isDirector && (
+        <nav
+          aria-label="Menú inferior móvil"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 pb-2 pt-1.5 shadow-[0_-6px_24px_rgba(0,0,0,0.12)] backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-900/95"
+        >
+          <div className="mx-auto grid max-w-md grid-cols-4 items-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => setActiveView('dashboard')}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-[10px] font-semibold transition ${
+                activeView === 'dashboard'
+                  ? 'bg-slate-900 text-white shadow-sm dark:bg-zinc-800 dark:text-white'
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <LayoutDashboard className="h-4 w-4 shrink-0" />
+              <span className="truncate">Proyectos</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveView('project-detail')}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-[10px] font-semibold transition ${
+                activeView === 'project-detail'
+                  ? 'bg-slate-900 text-white shadow-sm dark:bg-zinc-800 dark:text-white'
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <div className="flex items-center gap-1">
+                <Calculator className="h-4 w-4 shrink-0" />
+                <span
+                  className={`rounded px-1 py-0.2 font-mono text-[8px] ${
+                    activeView === 'project-detail'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                  }`}
+                >
+                  {selectedProject.code}
+                </span>
+              </div>
+              <span className="truncate">Presupuesto</span>
+            </button>
+
+            {/* Botón Destacado Central/Principal en Mobile: + Cotizar Proyecto */}
+            <button
+              type="button"
+              onClick={() => setIsQuoteModalOpen(true)}
+              className="-mt-3 flex flex-col items-center justify-center gap-1 rounded-2xl bg-emerald-600 px-2 py-2.5 text-[10px] font-extrabold text-white shadow-lg shadow-emerald-600/30 ring-2 ring-white transition active:scale-95 dark:bg-emerald-500 dark:text-zinc-950 dark:ring-zinc-900"
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 dark:bg-zinc-950/15">
+                <Plus className="h-4 w-4 stroke-[3]" />
+              </span>
+              <span className="truncate">Cotizar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveView('freelance-portal')}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-[10px] font-semibold transition ${
+                activeView === 'freelance-portal'
+                  ? 'bg-amber-500 text-white shadow-sm dark:bg-amber-400 dark:text-zinc-950'
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <Briefcase className="h-4 w-4 shrink-0" />
+              <span className="truncate">Freelance</span>
+            </button>
+          </div>
+        </nav>
+      )}
+
+      {/* Modal Global Cotizar Proyecto */}
+      <ScheduleEstimatorModal
+        isOpen={isQuoteModalOpen}
+        onClose={() => setIsQuoteModalOpen(false)}
+        onCreateProject={handleCreateProject}
+        onConfirmQuote={handleConfirmProjectQuote}
+      />
 
       {/* Modal HTTP 403 Forbidden Simplificado */}
       <NativeModal

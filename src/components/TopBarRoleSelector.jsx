@@ -41,41 +41,8 @@ export default function TopBarRoleSelector({
           </div>
         </div>
 
-        {/* Controles: Selector de Rol + Usuario Activo + Tema Claro/Oscuro */}
+        {/* Controles: Usuario Activo + Actividad + Tema Claro/Oscuro */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Selector de Rol Simplificado */}
-          <div
-            role="group"
-            aria-label="Cambiar vista de usuario"
-            className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-zinc-800 dark:bg-zinc-950"
-          >
-            <button
-              type="button"
-              onClick={() => onRoleChange('director')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                isDirector
-                  ? 'bg-white text-emerald-700 shadow-sm font-semibold dark:bg-emerald-500 dark:text-zinc-950'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
-              }`}
-            >
-              <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-              <span>Director</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onRoleChange('freelance')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                !isDirector
-                  ? 'bg-white text-amber-700 shadow-sm font-semibold dark:bg-amber-400 dark:text-zinc-950'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
-              }`}
-            >
-              <Briefcase className="h-3.5 w-3.5 shrink-0" />
-              <span>Freelance</span>
-            </button>
-          </div>
-
           {/* Usuario Activo Compacto */}
           <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-zinc-800 dark:bg-zinc-800/60 md:flex">
             <span

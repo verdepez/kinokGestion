@@ -339,15 +339,6 @@ export default function DirectorDashboard({
               Sobrecosto ({totals.redCount})
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setIsNewProjectModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Cotizar Proyecto</span>
-          </button>
         </div>
       </div>
 
@@ -936,24 +927,41 @@ export default function DirectorDashboard({
                       </span>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    {/* Enunciados con margen integrado */}
+                    <div className="mt-2.5 grid grid-cols-2 gap-1.5 rounded-xl border border-slate-100 bg-slate-50/70 p-2 text-[11px] dark:border-zinc-800 dark:bg-zinc-900/60">
+                      {metrics.categoryBreakdown.map((cat) => (
+                        <div
+                          key={cat.id}
+                          className="flex items-center justify-between gap-1 rounded-lg bg-white px-2 py-1 dark:bg-zinc-950"
+                        >
+                          <span className="truncate text-slate-500 dark:text-zinc-400">
+                            {cat.shortLabel}
+                          </span>
+                          <span className="font-mono font-semibold text-slate-800 dark:text-zinc-200">
+                            {formatCompactCLP(cat.quotedNet)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-3 gap-2 rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-xs dark:border-zinc-800 dark:bg-zinc-900">
                       <div>
-                        <span className="block text-[10px] text-slate-400">Costo Directo</span>
-                        <span className="font-mono font-semibold text-slate-700 dark:text-zinc-200">
-                          {formatCLP(metrics.costoDirectoTotal)}
+                        <span className="block text-[10px] text-slate-400">
+                          Valor Neto (c/margen {quoteProj.desiredMarginPct}%)
+                        </span>
+                        <span className="font-mono font-semibold text-slate-800 dark:text-zinc-200">
+                          {formatCLP(metrics.precioVentaNeto)}
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[10px] text-slate-400">
-                          Margen ({quoteProj.desiredMarginPct}%)
-                        </span>
-                        <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                          {formatCLP(metrics.precioVentaNeto)} Neto
+                        <span className="block text-[10px] text-slate-400">IVA Débito (19%)</span>
+                        <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
+                          {formatCLP(metrics.ivaDebito)}
                         </span>
                       </div>
                       <div>
                         <span className="block text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
-                          Total c/IVA (19%)
+                          Total Propuesta (c/IVA)
                         </span>
                         <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">
                           {formatCLP(metrics.precioVentaBruto)}
